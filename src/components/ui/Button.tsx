@@ -11,17 +11,17 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary: 'bg-vault-gold text-vault-bg hover:bg-vault-gold-dim font-semibold',
-  secondary: 'bg-vault-surface-2 text-vault-text border border-vault-border hover:bg-vault-surface-3 hover:border-vault-border-light',
-  ghost: 'text-vault-text-secondary hover:text-vault-text hover:bg-vault-surface-2',
-  danger: 'bg-vault-danger/10 text-vault-danger border border-vault-danger/20 hover:bg-vault-danger/20',
-  outline: 'border border-vault-border text-vault-text-secondary hover:text-vault-text hover:border-vault-border-light hover:bg-vault-surface-2',
+  primary: 'bg-vault-teal text-white hover:bg-vault-teal-hover active:scale-[0.98]',
+  secondary: 'bg-white text-vault-gray-700 border border-vault-gray-300 hover:bg-vault-gray-50',
+  ghost: 'text-vault-gray-600 hover:bg-vault-gray-100',
+  danger: 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100',
+  outline: 'bg-transparent border border-vault-gray-300 text-vault-gray-700 hover:bg-gray-50',
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: 'px-3 py-1.5 text-xs rounded-lg gap-1.5',
-  md: 'px-4 py-2 text-sm rounded-xl gap-2',
-  lg: 'px-6 py-3 text-sm rounded-xl gap-2',
+  sm: 'px-3 py-1.5 text-xs rounded-lg gap-1.5 h-8',
+  md: 'px-4 py-2 text-sm rounded-lg gap-2 h-10',
+  lg: 'px-6 py-2.5 text-base rounded-lg gap-2 h-12',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -29,12 +29,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <motion.button
         ref={ref}
-        whileTap={{ scale: 0.97 }}
-        className={`inline-flex items-center justify-center font-medium transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+        whileTap={{ scale: 0.98 }}
+        className={`inline-flex items-center justify-center font-medium transition-all duration-100 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
         {...(props as any)}
       >
         {icon && <span className="flex-shrink-0">{icon}</span>}
-        {children}
+        {children && <span className="truncate">{children}</span>}
       </motion.button>
     );
   }

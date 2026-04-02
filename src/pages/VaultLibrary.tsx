@@ -65,109 +65,110 @@ export function VaultLibrary() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="p-6 space-y-5 max-w-4xl"
+      className="p-8 space-y-8 max-w-6xl mx-auto h-full overflow-y-auto scrollbar-hidden"
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-end justify-between border-b border-vault-gray-100 pb-6">
         <div>
-          <h2 className="text-lg font-bold text-vault-text">
+          <h2 className="text-2xl font-bold text-vault-gray-950 tracking-tight">
             {categories.find(c => c.key === activeCategory)?.label || 'Vault'}
           </h2>
-          <p className="text-xs text-vault-text-muted mt-0.5">{filteredItems.length} items</p>
+          <p className="text-sm text-vault-gray-500 mt-1">{filteredItems.length} secure items stored</p>
         </div>
         <Button
-          icon={<Plus size={16} />}
+          icon={<Plus size={18} strokeWidth={2.5} />}
           onClick={() => navigate('/add')}
-          size="sm"
+          size="md"
         >
-          Add Item
+          Add New Item
         </Button>
       </div>
 
       {/* Category tabs */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
         {categories.map(cat => (
           <button
             key={cat.key}
             onClick={() => navigate(cat.key === 'all' ? '/vault' : `/vault/${cat.key}`)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all cursor-pointer border shadow-sm ${
               activeCategory === cat.key
-                ? 'bg-vault-gold/10 text-vault-gold border border-vault-gold/20'
-                : 'text-vault-text-muted hover:text-vault-text hover:bg-vault-surface-2 border border-transparent'
+                ? 'bg-vault-primary-600 text-white border-vault-primary-600'
+                : 'bg-white text-vault-gray-600 hover:text-vault-gray-900 border-vault-gray-200 hover:border-vault-gray-300'
             }`}
           >
             {cat.label}
-            <span className="text-[10px] opacity-60">{getCategoryCount(cat.key)}</span>
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+              activeCategory === cat.key ? 'bg-white/20 text-white' : 'bg-vault-gray-100 text-vault-gray-500'
+            }`}>
+              {getCategoryCount(cat.key)}
+            </span>
           </button>
         ))}
       </div>
 
       {/* Controls */}
-      <div className="flex items-center gap-2">
-        <div className="flex-1 relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-vault-text-muted" />
+      <div className="flex items-center gap-3">
+        <div className="flex-1 relative max-w-md">
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-vault-gray-400" />
           <input
             type="text"
-            placeholder={`Search ${categories.find(c => c.key === activeCategory)?.label.toLowerCase()}...`}
+            placeholder={`Search in ${categories.find(c => c.key === activeCategory)?.label.toLowerCase()}...`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-vault-surface-2 border border-vault-border rounded-xl pl-9 pr-4 py-2 text-sm text-vault-text placeholder:text-vault-text-muted focus:outline-none focus:border-vault-gold/30 transition-colors"
+            className="w-full bg-white border border-vault-gray-200 rounded-full pl-11 pr-4 py-2.5 text-sm text-vault-gray-900 placeholder:text-vault-gray-400 focus:outline-none focus:border-vault-primary-500 focus:ring-4 focus:ring-vault-primary-50 transition-all duration-200"
           />
         </div>
 
         <button
           onClick={() => setShowFavorites(!showFavorites)}
-          className={`p-2 rounded-xl border transition-colors cursor-pointer ${
+          className={`p-2.5 rounded-lg border transition-all cursor-pointer shadow-sm ${
             showFavorites
-              ? 'bg-vault-gold/10 border-vault-gold/20 text-vault-gold'
-              : 'bg-vault-surface-2 border-vault-border text-vault-text-muted hover:text-vault-text'
+              ? 'bg-amber-50 border-amber-200 text-amber-500'
+              : 'bg-white border-vault-gray-200 text-vault-gray-400 hover:text-vault-gray-600'
           }`}
+          title="Show favorites"
         >
-          <Star size={16} />
+          <Star size={18} fill={showFavorites ? 'currentColor' : 'none'} />
         </button>
 
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as SortOption)}
-          className="bg-vault-surface-2 border border-vault-border rounded-xl px-3 py-2 text-xs text-vault-text-secondary focus:outline-none focus:border-vault-gold/30 cursor-pointer appearance-none"
-        >
-          <option value="recent">Recent</option>
-          <option value="name">Name</option>
-          <option value="oldest">Oldest</option>
-        </select>
+        <div className="h-8 w-[1px] bg-vault-gray-200 mx-1" />
 
-        <div className="flex bg-vault-surface-2 border border-vault-border rounded-xl overflow-hidden">
+        <div className="flex bg-white border border-vault-gray-200 rounded-lg overflow-hidden shadow-sm">
           <button
             onClick={() => setViewMode('list')}
-            className={`p-2 cursor-pointer ${viewMode === 'list' ? 'bg-vault-surface-3 text-vault-text' : 'text-vault-text-muted'}`}
+            className={`p-2.5 cursor-pointer transition-colors ${viewMode === 'list' ? 'bg-vault-gray-100 text-vault-gray-900' : 'text-vault-gray-400 hover:text-vault-gray-600'}`}
           >
-            <List size={16} />
+            <List size={18} />
           </button>
           <button
             onClick={() => setViewMode('grid')}
-            className={`p-2 cursor-pointer ${viewMode === 'grid' ? 'bg-vault-surface-3 text-vault-text' : 'text-vault-text-muted'}`}
+            className={`p-2.5 cursor-pointer transition-colors ${viewMode === 'grid' ? 'bg-vault-gray-100 text-vault-gray-900' : 'text-vault-gray-400 hover:text-vault-gray-600'}`}
           >
-            <Grid3X3 size={16} />
+            <Grid3X3 size={18} />
           </button>
         </div>
       </div>
 
-      {/* Items */}
+      {/* Items List */}
       {filteredItems.length === 0 ? (
-        <EmptyState
-          icon={<FolderLock size={28} />}
-          title={searchQuery ? 'No results found' : 'No items yet'}
-          description={searchQuery ? 'Try a different search term' : 'Add your first item to get started'}
-          action={
-            !searchQuery && (
-              <Button icon={<Plus size={16} />} onClick={() => navigate('/add')} size="sm">
-                Add Item
+        <div className="vault-card p-20 bg-white flex flex-col items-center justify-center text-center">
+            <div className="w-20 h-20 rounded-full bg-vault-gray-50 flex items-center justify-center mb-6">
+              <FolderLock size={40} className="text-vault-gray-300" />
+            </div>
+            <h3 className="text-xl font-bold text-vault-gray-950 mb-2">
+              {searchQuery ? 'No results matches your search' : 'No items in this category'}
+            </h3>
+            <p className="text-sm text-vault-gray-500 max-w-sm mx-auto leading-relaxed">
+              {searchQuery ? 'Try adjusting your search terms or filters.' : 'Your secure cabinet is ready to store your data.'}
+            </p>
+            {!searchQuery && (
+              <Button icon={<Plus size={18} />} onClick={() => navigate('/add')} className="mt-8">
+                Add Your First Item
               </Button>
-            )
-          }
-        />
+            )}
+        </div>
       ) : (
-        <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-2' : 'space-y-1.5'}>
+        <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-3 pb-8'}>
           {filteredItems.map((item, i) => (
             <VaultItemCard key={item.id} item={item} index={i} />
           ))}

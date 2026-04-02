@@ -2,15 +2,18 @@ import React, { createContext, useContext, useState, useCallback, ReactNode } fr
 import { VaultItem, VaultCategory, Toast, VaultState } from '../types/vault';
 import { allMockItems } from '../data/mockData';
 
+import { saveVaultItem, updateVaultItem as updateVaultItemServer, deleteVaultItemFromServer, fetchVaultItems } from '../services/vaultService';
+import { login, register } from '../services/authService';
+
 interface VaultContextType extends VaultState {
-  unlock: (password: string) => boolean;
+  unlock: (password: string) => Promise<boolean>;
   lock: () => void;
   setSearchQuery: (query: string) => void;
   setActiveCategory: (category: VaultCategory | 'all') => void;
-  addItem: (item: VaultItem) => void;
-  updateItem: (item: VaultItem) => void;
-  deleteItem: (id: string) => void;
-  toggleFavorite: (id: string) => void;
+  addItem: (item: VaultItem) => Promise<void>;
+  updateItem: (item: VaultItem) => Promise<void>;
+  deleteItem: (id: string) => Promise<void>;
+  toggleFavorite: (id: string) => Promise<void>;
   addToast: (message: string, type: Toast['type']) => void;
   removeToast: (id: string) => void;
   getFilteredItems: () => VaultItem[];
@@ -18,48 +21,96 @@ interface VaultContextType extends VaultState {
 
 const VaultContext = createContext<VaultContextType | undefined>(undefined);
 
-const MASTER_PASSWORD = 'vault2026';
-
 export function VaultProvider({ children }: { children: ReactNode }) {
   const [isLocked, setIsLocked] = useState(true);
-  const [items, setItems] = useState<VaultItem[]>(allMockItems);
+  const [items, setItems] = useState<VaultItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<VaultCategory | 'all'>('all');
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const unlock = useCallback((password: string) => {
-    if (password === MASTER_PASSWORD || password.length > 0) {
+  const unlock = useCallback(async (password: string) => {
+    try {
+      const email = 'demo@vault.local';
+      
+      let res = await login(email, password);
+      if (!res.success && res.error?.includes('Account not found')) {
+        res = await register(email, password);
+      }
+      
+      if (!res.success) {
+        return false;
+      }
+      
       setIsLocked(false);
+      
+      try {
+        const serverItems = await fetchVaultItems();
+        setItems(serverItems);
+      } catch (err) {
+        addToast('Failed to load items from server', 'error');
+        console.error(err);
+      }
+      
       return true;
+    } catch (err) {
+      console.error(err);
+      return false;
     }
-    return false;
   }, []);
 
   const lock = useCallback(() => {
     setIsLocked(true);
     setSearchQuery('');
+    setItems([]);
   }, []);
 
-  const addItem = useCallback((item: VaultItem) => {
-    setItems(prev => [item, ...prev]);
-    addToast('Item added to vault', 'success');
+  const addItem = useCallback(async (item: VaultItem) => {
+    const res = await saveVaultItem(item);
+    if (!res.success) {
+      addToast('Failed to sync item to server', 'error');
+    } else {
+      setItems(prev => [item, ...prev]);
+      addToast('Item added to vault', 'success');
+    }
   }, []);
 
-  const updateItem = useCallback((updated: VaultItem) => {
-    setItems(prev => prev.map(item => item.id === updated.id ? updated : item));
-    addToast('Item updated', 'success');
+  const updateItem = useCallback(async (updated: VaultItem) => {
+    const res = await updateVaultItemServer(updated);
+    if (!res.success) {
+      addToast('Failed to update item on server', 'error');
+    } else {
+      setItems(prev => prev.map(item => item.id === updated.id ? updated : item));
+      addToast('Item updated', 'success');
+    }
   }, []);
 
-  const deleteItem = useCallback((id: string) => {
-    setItems(prev => prev.filter(item => item.id !== id));
-    addToast('Item deleted', 'info');
+  const deleteItem = useCallback(async (id: string) => {
+    const res = await deleteVaultItemFromServer(id);
+    if (!res.success) {
+      addToast('Failed to delete item from server', 'error');
+    } else {
+      setItems(prev => prev.filter(item => item.id !== id));
+      addToast('Item deleted', 'info');
+    }
   }, []);
 
-  const toggleFavorite = useCallback((id: string) => {
-    setItems(prev => prev.map(item =>
-      item.id === id ? { ...item, favorite: !item.favorite } : item
-    ));
-  }, []);
+  const toggleFavorite = useCallback(async (id: string) => {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+
+    const updated = { ...item, favorite: !item.favorite };
+    
+    // First update locally for immediate UI response
+    setItems(prev => prev.map(i => i.id === id ? updated : i));
+    
+    // Then sync
+    const res = await updateVaultItemServer(updated);
+    if (!res.success) {
+      // Revert on failure
+      setItems(prev => prev.map(i => i.id === id ? item : i));
+      addToast('Failed to update favorite', 'error');
+    }
+  }, [items]);
 
   const addToast = useCallback((message: string, type: Toast['type']) => {
     const id = Date.now().toString();

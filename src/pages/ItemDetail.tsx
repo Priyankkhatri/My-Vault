@@ -16,24 +16,24 @@ function FieldRow({ label, value, sensitive = false, copyable = true }: {
   label: string; value: string; sensitive?: boolean; copyable?: boolean;
 }) {
   const [revealed, setRevealed] = useState(false);
-  const displayValue = sensitive && !revealed ? '•'.repeat(Math.min(value.length, 16)) : value;
+  const displayValue = sensitive && !revealed ? '••••••••••••••••' : value;
 
   return (
-    <div className="flex items-center justify-between py-3 border-b border-vault-border/50 group">
+    <div className="flex items-center justify-between py-4 border-b border-vault-gray-100 group transition-all hover:translate-x-1">
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] text-vault-text-muted uppercase tracking-wider mb-1 font-medium">{label}</p>
-        <p className={`text-sm text-vault-text truncate ${sensitive ? 'font-mono' : ''}`}>{displayValue}</p>
+        <p className="text-[10px] text-vault-gray-400 uppercase tracking-widest mb-1.5 font-bold">{label}</p>
+        <p className={`text-sm text-vault-gray-900 truncate font-semibold ${sensitive ? 'font-mono' : ''}`}>{displayValue}</p>
       </div>
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all">
         {sensitive && (
           <button
             onClick={() => setRevealed(!revealed)}
-            className="p-1.5 rounded-lg text-vault-text-muted hover:text-vault-text transition-colors cursor-pointer"
+            className="p-2 rounded-lg text-vault-gray-400 hover:text-vault-gray-900 hover:bg-vault-gray-50 transition-all cursor-pointer"
           >
-            {revealed ? <EyeOff size={14} /> : <Eye size={14} />}
+            {revealed ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         )}
-        {copyable && <CopyButton value={value} size={14} />}
+        {copyable && <CopyButton value={value} size={16} />}
       </div>
     </div>
   );
@@ -41,23 +41,23 @@ function FieldRow({ label, value, sensitive = false, copyable = true }: {
 
 function PasswordStrengthBar({ strength }: { strength: string }) {
   const levels = { weak: 25, fair: 50, strong: 75, excellent: 100 };
-  const colors = { weak: 'bg-vault-danger', fair: 'bg-vault-warning', strong: 'bg-vault-info', excellent: 'bg-vault-success' };
-  const badgeVariants = { weak: 'danger' as const, fair: 'warning' as const, strong: 'info' as const, excellent: 'success' as const };
+  const colors = { weak: 'bg-red-500', fair: 'bg-amber-500', strong: 'bg-blue-500', excellent: 'bg-vault-primary-600' };
+  const badgeVariants = { weak: 'danger' as const, fair: 'warning' as const, strong: 'info' as const, excellent: 'teal' as const };
   const pct = levels[strength as keyof typeof levels] || 0;
-  const color = colors[strength as keyof typeof colors] || 'bg-vault-text-muted';
+  const color = colors[strength as keyof typeof colors] || 'bg-vault-gray-200';
 
   return (
-    <div className="py-3 border-b border-vault-border/50">
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-[10px] text-vault-text-muted uppercase tracking-wider font-medium">Password Strength</p>
+    <div className="py-5 border-b border-vault-gray-100">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-[10px] text-vault-gray-400 uppercase tracking-widest font-bold">Security Score</p>
         <Badge variant={badgeVariants[strength as keyof typeof badgeVariants] || 'default'}>{strength}</Badge>
       </div>
-      <div className="h-1.5 bg-vault-surface-3 rounded-full overflow-hidden">
+      <div className="h-2 bg-vault-gray-100 rounded-full overflow-hidden">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
-          className={`h-full rounded-full ${color}`}
+          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+          className={`h-full rounded-full ${color} shadow-sm`}
         />
       </div>
     </div>
@@ -67,9 +67,9 @@ function PasswordStrengthBar({ strength }: { strength: string }) {
 function renderPasswordFields(item: PasswordItem) {
   return (
     <>
-      <FieldRow label="Website" value={item.website} />
-      <FieldRow label="URL" value={item.url} />
-      <FieldRow label="Username" value={item.username} />
+      <FieldRow label="Website Name" value={item.website} />
+      <FieldRow label="Login URL" value={item.url} />
+      <FieldRow label="Username / Email" value={item.username} />
       <FieldRow label="Password" value={item.password} sensitive />
       <PasswordStrengthBar strength={item.strength} />
     </>
@@ -79,14 +79,14 @@ function renderPasswordFields(item: PasswordItem) {
 function renderAddressFields(item: AddressItem) {
   return (
     <>
-      <FieldRow label="Full Name" value={item.fullName} />
-      <FieldRow label="Phone" value={item.phone} />
+      <FieldRow label="Recipient Name" value={item.fullName} />
+      <FieldRow label="Contact Number" value={item.phone} />
       <FieldRow label="Address Line 1" value={item.addressLine1} />
       {item.addressLine2 && <FieldRow label="Address Line 2" value={item.addressLine2} />}
       <FieldRow label="City" value={item.city} />
-      <FieldRow label="State" value={item.state} />
+      <FieldRow label="State / Province" value={item.state} />
       <FieldRow label="Country" value={item.country} />
-      <FieldRow label="ZIP Code" value={item.zipCode} />
+      <FieldRow label="ZIP / Postal Code" value={item.zipCode} />
     </>
   );
 }
@@ -94,11 +94,11 @@ function renderAddressFields(item: AddressItem) {
 function renderCardFields(item: CardItem) {
   return (
     <>
-      <FieldRow label="Card Name" value={item.cardName} />
-      <FieldRow label="Cardholder" value={item.cardholderName} />
+      <FieldRow label="Card Label" value={item.cardName} />
+      <FieldRow label="Cardholder Name" value={item.cardholderName} />
       <FieldRow label="Card Number" value={item.number} sensitive />
-      <FieldRow label="Expiry" value={item.expiry} />
-      <FieldRow label="CVV" value={item.cvv} sensitive />
+      <FieldRow label="Expiry Date" value={item.expiry} />
+      <FieldRow label="Security Code (CVV)" value={item.cvv} sensitive />
       {item.billingAddress && <FieldRow label="Billing Address" value={item.billingAddress} />}
     </>
   );
@@ -106,10 +106,10 @@ function renderCardFields(item: CardItem) {
 
 function renderNoteFields(item: NoteItem) {
   return (
-    <div className="py-3 border-b border-vault-border/50">
-      <p className="text-[10px] text-vault-text-muted uppercase tracking-wider mb-2 font-medium">Content</p>
-      <div className="p-4 bg-vault-surface-2 rounded-xl border border-vault-border">
-        <pre className="text-sm text-vault-text whitespace-pre-wrap font-sans leading-relaxed">{item.content}</pre>
+    <div className="py-4">
+      <p className="text-[10px] text-vault-gray-400 uppercase tracking-widest mb-3 font-bold">Content</p>
+      <div className="p-5 bg-vault-gray-50 rounded-xl border border-vault-gray-200">
+        <pre className="text-sm text-vault-gray-900 whitespace-pre-wrap font-sans leading-relaxed">{item.content}</pre>
       </div>
     </div>
   );
@@ -118,13 +118,14 @@ function renderNoteFields(item: NoteItem) {
 function renderDocumentFields(item: DocumentItem) {
   return (
     <>
-      <FieldRow label="File Name" value={item.fileName} />
-      <FieldRow label="File Size" value={item.fileSize} />
-      <FieldRow label="File Type" value={item.fileType} />
-      <div className="py-3 border-b border-vault-border/50">
+      <FieldRow label="Filename" value={item.fileName} />
+      <FieldRow label="Size" value={item.fileSize} />
+      <FieldRow label="Format" value={item.fileType} />
+      <div className="py-4 flex items-center justify-between border-b border-vault-gray-100">
+        <p className="text-[10px] text-vault-gray-400 uppercase tracking-widest font-bold">Encryption Status</p>
         <div className="flex items-center gap-2">
-          <Shield size={14} className="text-vault-success" />
-          <span className="text-xs text-vault-text-muted">{item.encrypted ? 'Encrypted at rest' : 'Not encrypted'}</span>
+          <Shield size={14} className="text-emerald-600" strokeWidth={2.5} />
+          <span className="text-xs font-bold text-emerald-700">{item.encrypted ? 'AES-256 Protected' : 'Unprotected'}</span>
         </div>
       </div>
     </>
@@ -142,7 +143,7 @@ export function ItemDetail() {
   if (!item) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-vault-text-muted">Item not found</p>
+        <p className="text-vault-gray-400 font-semibold">Item not found</p>
       </div>
     );
   }
@@ -159,107 +160,146 @@ export function ItemDetail() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      className="max-w-2xl mx-auto p-6"
+      initial={{ opacity: 0, scale: 0.99 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="max-w-4xl mx-auto p-8 h-full overflow-y-auto scrollbar-hidden pb-20"
     >
-      {/* Back button */}
+      {/* Navigation */}
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-sm text-vault-text-muted hover:text-vault-text transition-colors mb-6 cursor-pointer"
+        className="flex items-center gap-2 text-sm font-bold text-vault-gray-400 hover:text-vault-gray-900 transition-all mb-8 cursor-pointer group"
       >
-        <ArrowLeft size={16} /> Back
+        <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+        Back to Gallery
       </button>
 
-      {/* Header */}
-      <div className="flex items-start gap-4 mb-6">
-        <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center flex-shrink-0 ${getCategoryBg(item.type)} ${getCategoryColor(item.type)}`}>
-          {getCategoryIcon(item.type, 24)}
+      {/* Header Card */}
+      <div className="flex items-center gap-6 mb-8 bg-white p-6 rounded-2xl border border-vault-gray-200 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-1.5 h-full bg-vault-primary-600" />
+        <div className={`w-16 h-16 rounded-xl border flex items-center justify-center flex-shrink-0 shadow-sm ${getCategoryBg(item.type)} ${getCategoryColor(item.type)}`}>
+          {getCategoryIcon(item.type, 28)}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-xl font-bold text-vault-text truncate">{item.title}</h2>
+          <div className="flex items-center gap-3 mb-1.5">
+            <h2 className="text-2xl font-bold text-vault-gray-950 truncate tracking-tight">{item.title}</h2>
             <button
               onClick={() => toggleFavorite(item.id)}
-              className="cursor-pointer"
+              className="cursor-pointer p-1 rounded-full hover:bg-vault-gray-50 transition-colors"
             >
-              <Star size={18} className={item.favorite ? 'text-vault-gold fill-vault-gold' : 'text-vault-text-muted hover:text-vault-gold'} />
+              <Star size={20} className={item.favorite ? 'text-amber-500 fill-amber-500' : 'text-vault-gray-300 hover:text-amber-500'} />
             </button>
           </div>
-          <Badge variant="gold">{getCategoryLabel(item.type)}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="teal" size="md">{getCategoryLabel(item.type)}</Badge>
+            <span className="text-xs font-bold text-vault-gray-400 uppercase tracking-widest">•</span>
+            <span className="text-xs font-bold text-vault-gray-400 uppercase tracking-widest">ID: {item.id.substring(0, 8)}</span>
+          </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" icon={<Edit size={14} />}>Edit</Button>
-          <Button variant="danger" size="sm" icon={<Trash2 size={14} />} onClick={() => setShowDeleteConfirm(true)}>Delete</Button>
+          <Button variant="secondary" size="md" icon={<Edit size={16} />}>Edit Detail</Button>
+          <Button variant="danger" size="md" icon={<Trash2 size={16} />} onClick={() => setShowDeleteConfirm(true)}>Delete</Button>
         </div>
       </div>
 
-      {/* URL action for passwords */}
-      {item.type === 'password' && (
-        <a
-          href={(item as PasswordItem).url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 px-4 py-2.5 mb-4 rounded-xl bg-vault-surface border border-vault-border text-sm text-vault-info hover:bg-vault-surface-2 transition-colors"
-        >
-          <ExternalLink size={14} />
-          Open {(item as PasswordItem).website}
-          <span className="ml-auto text-xs text-vault-text-muted">↗</span>
-        </a>
-      )}
-
-      {/* Field rows */}
-      <div className="vault-card p-5 mb-6">
-        {renderFields()}
-
-        {/* Notes */}
-        {item.notes && item.type !== 'note' && (
-          <div className="py-3 border-b border-vault-border/50">
-            <p className="text-[10px] text-vault-text-muted uppercase tracking-wider mb-1 font-medium">Notes</p>
-            <p className="text-sm text-vault-text-secondary">{item.notes}</p>
-          </div>
-        )}
-      </div>
-
-      {/* Metadata */}
-      <div className="vault-card p-5">
-        <h3 className="text-xs font-semibold text-vault-text-secondary uppercase tracking-wider mb-3">Metadata</h3>
-        <div className="space-y-2.5">
-          {item.folder && (
-            <div className="flex items-center gap-2 text-xs text-vault-text-muted">
-              <Folder size={13} /> <span>{item.folder}</span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          {/* Main Credentials Card */}
+          <div className="vault-card p-6 bg-white shadow-sm border border-vault-gray-200">
+            <h3 className="text-[10px] font-bold text-vault-gray-400 uppercase tracking-widest mb-4 border-b border-vault-gray-50 pb-3">Secure Attributes</h3>
+            <div className="px-1">
+              {renderFields()}
+              
+              {/* Internal Notes */}
+              {item.notes && item.type !== 'note' && (
+                <div className="py-5">
+                  <p className="text-[10px] text-vault-gray-400 uppercase tracking-widest mb-2 font-bold">Internal Notes</p>
+                  <p className="text-sm font-medium text-vault-gray-600 leading-relaxed bg-vault-gray-50 p-4 rounded-xl border border-vault-gray-200">
+                    {item.notes}
+                  </p>
+                </div>
+              )}
             </div>
+          </div>
+        </div>
+
+        {/* Sidebar Context */}
+        <div className="space-y-6">
+          {/* Website Link for Passwords */}
+          {item.type === 'password' && (item as PasswordItem).website && (
+            <a
+              href={(item as PasswordItem).website}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center justify-between p-5 rounded-2xl bg-vault-primary-600 text-white shadow-lg shadow-vault-primary-200 hover:bg-vault-primary-500 transition-all overflow-hidden relative"
+            >
+              <div className="relative z-10">
+                <p className="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Access Portal</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold truncate max-w-[140px]">{(item as PasswordItem).website.replace(/^https?:\/\//, '')}</span>
+                  <ExternalLink size={14} strokeWidth={2.5}/>
+                </div>
+              </div>
+              <div className="bg-white/10 p-3 rounded-xl scale-125 group-hover:scale-150 transition-transform">
+                <ExternalLink size={24} strokeWidth={1}/>
+              </div>
+            </a>
           )}
-          {item.tags.length > 0 && (
-            <div className="flex items-center gap-2 text-xs text-vault-text-muted">
-              <Tag size={13} />
-              <div className="flex gap-1 flex-wrap">
-                {item.tags.map(tag => (
-                  <span key={tag} className="px-2 py-0.5 bg-vault-surface-3 rounded-md text-vault-text-secondary">{tag}</span>
-                ))}
+
+          {/* Metadata Card */}
+          <div className="vault-card p-6 bg-white shadow-sm border border-vault-gray-200">
+            <h3 className="text-[10px] font-bold text-vault-gray-400 uppercase tracking-widest mb-5">Storage Details</h3>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Folder size={16} className="text-vault-gray-400" />
+                <div>
+                  <p className="text-[10px] font-bold text-vault-gray-400 uppercase tracking-widest leading-none mb-1">Folder</p>
+                  <p className="text-xs font-bold text-vault-gray-900">{item.folder || 'Root (Main)'}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <Tag size={16} className="text-vault-gray-400 mt-0.5" />
+                <div>
+                  <p className="text-[10px] font-bold text-vault-gray-400 uppercase tracking-widest leading-none mb-2">Classification</p>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {item.tags.length > 0 ? (
+                      item.tags.map(tag => (
+                        <span key={tag} className="px-2 py-0.5 bg-vault-gray-100 border border-vault-gray-200 rounded-full text-[10px] font-bold text-vault-gray-600">
+                          {tag}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs font-medium text-vault-gray-400 italic">No tags assigned</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 space-y-3">
+                <div className="flex items-center justify-between text-[10px] font-bold">
+                  <span className="text-vault-gray-400 flex items-center gap-1.5 uppercase tracking-widest"><Calendar size={12}/> Added</span>
+                  <span className="text-vault-gray-700">{new Date(item.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                </div>
+                <div className="flex items-center justify-between text-[10px] font-bold">
+                  <span className="text-vault-gray-400 flex items-center gap-1.5 uppercase tracking-widest"><Clock size={12}/> Last Revision</span>
+                  <span className="text-vault-gray-700">{new Date(item.updatedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                </div>
               </div>
             </div>
-          )}
-          <div className="flex items-center gap-2 text-xs text-vault-text-muted">
-            <Calendar size={13} /> Created: {new Date(item.createdAt).toLocaleDateString()}
-          </div>
-          <div className="flex items-center gap-2 text-xs text-vault-text-muted">
-            <Clock size={13} /> Modified: {new Date(item.updatedAt).toLocaleDateString()}
           </div>
         </div>
       </div>
 
-      {/* Delete confirmation */}
       <ConfirmDialog
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={() => { deleteItem(item.id); navigate(-1); }}
-        title="Delete Item"
-        description={`Are you sure you want to delete "${item.title}"? This action cannot be undone.`}
-        confirmLabel="Delete"
+        title="Permanently Delete Item"
+        description={`This will erase "${item.title}" and its associated encrypted data from your vault. This action cannot be reversed.`}
+        confirmLabel="Erase Item"
         danger
       />
     </motion.div>
+
   );
 }

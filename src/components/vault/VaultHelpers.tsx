@@ -8,24 +8,24 @@ interface SecurityRingProps {
   label?: string;
 }
 
-export function SecurityRing({ score, size = 120, strokeWidth = 8, label }: SecurityRingProps) {
+export function SecurityRing({ score, size = 120, strokeWidth = 10, label }: SecurityRingProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (score / 100) * circumference;
 
   const getColor = () => {
-    if (score >= 80) return '#22c55e';
-    if (score >= 60) return '#d4a843';
-    if (score >= 40) return '#f59e0b';
-    return '#ef4444';
+    if (score >= 90) return '#0d9488'; // Teal 600
+    if (score >= 70) return '#10b981'; // Green 500
+    if (score >= 50) return '#f59e0b'; // Amber 500
+    return '#ef4444'; // Red 500
   };
 
   return (
-    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+    <div className="relative inline-flex items-center justify-center translate-y-1" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="transform -rotate-90">
         <circle
           cx={size / 2} cy={size / 2} r={radius}
-          stroke="rgba(39,39,42,0.8)" strokeWidth={strokeWidth}
+          stroke="#f3f4f6" strokeWidth={strokeWidth}
           fill="none"
         />
         <circle
@@ -37,8 +37,8 @@ export function SecurityRing({ score, size = 120, strokeWidth = 8, label }: Secu
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-bold text-vault-text">{score}</span>
-        {label && <span className="text-[10px] text-vault-text-muted uppercase tracking-wider">{label}</span>}
+        <span className="text-3xl font-bold text-vault-gray-950 tracking-tighter">{score}</span>
+        {label && <span className="text-[10px] font-bold text-vault-gray-400 uppercase tracking-widest leading-none mt-1">{label}</span>}
       </div>
     </div>
   );
@@ -66,20 +66,20 @@ export function getCategoryLabel(type: VaultCategory) {
 
 export function getCategoryColor(type: VaultCategory) {
   switch (type) {
-    case 'password': return 'text-vault-gold';
-    case 'address': return 'text-vault-info';
-    case 'card': return 'text-purple-400';
-    case 'note': return 'text-vault-success';
-    case 'document': return 'text-orange-400';
+    case 'password': return 'text-vault-primary-600';
+    case 'address': return 'text-blue-600';
+    case 'card': return 'text-purple-600';
+    case 'note': return 'text-emerald-600';
+    case 'document': return 'text-orange-600';
   }
 }
 
 export function getCategoryBg(type: VaultCategory) {
   switch (type) {
-    case 'password': return 'bg-vault-gold/10 border-vault-gold/20';
-    case 'address': return 'bg-vault-info/10 border-vault-info/20';
-    case 'card': return 'bg-purple-400/10 border-purple-400/20';
-    case 'note': return 'bg-vault-success/10 border-vault-success/20';
-    case 'document': return 'bg-orange-400/10 border-orange-400/20';
+    case 'password': return 'bg-vault-primary-50 border-vault-primary-100';
+    case 'address': return 'bg-blue-50 border-blue-100';
+    case 'card': return 'bg-purple-50 border-purple-100';
+    case 'note': return 'bg-emerald-50 border-emerald-100';
+    case 'document': return 'bg-orange-50 border-orange-100';
   }
 }

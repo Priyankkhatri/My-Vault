@@ -1,0 +1,189 @@
+import { Router, type Request, type Response } from 'express';
+import { z } from 'zod';
+import { authMiddleware } from '../middleware/auth.js';
+import * as db from '../db/store.js';
+
+const router = Router();
+
+// All vault routes require authentication
+router.use(authMiddleware);
+
+// ─── Validation ─────────────────────────────────────────────────
+
+const createItemSchema = z.object({
+  id: z.string().uuid(),
+  encryptedData: z.string().min(1),
+  iv: z.string().min(1),
+  itemType: z.enum(['password', 'address', 'card', 'note', 'document']),
+  metadata: z.object({
+    tags: z.array(z.string()).optional().default([]),
+    folder: z.string().optional().default(''),
+    title: z.string().optional().default(''),
+    createdAt: z.string().optional(),
+    updatedAt: z.string().optional(),
+  }).optional().default({}),
+});
+
+const updateItemSchema = z.object({
+  encryptedData: z.string().min(1),
+  iv: z.string().min(1),
+  metadata: z.record(z.unknown()).optional(),
+  version: z.number().int().positive(),
+});
+
+// ─── GET /api/vault/items ───────────────────────────────────────
+
+router.get('/items', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const items = await db.getVaultItems(req.user!.userId);
+
+    await db.createAuditLog(req.user!.userId, 'vault_access', { action: 'list' }, req.ip || '', req.headers['user-agent'] || '');
+
+    res.json({
+      success: true,
+      data: items.map(item => ({
+        id: item.id,
+        encryptedData: item.encrypted_data,
+        iv: item.iv,
+        itemType: item.item_type,
+        metadata: item.metadata,
+        version: item.version,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+      })),
+    });
+  } catch (error) {
+    console.error('[Vault] List error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ─── POST /api/vault/items ──────────────────────────────────────
+
+router.post('/items', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const body = createItemSchema.parse(req.body);
+
+    const item = await db.createVaultItem(
+      req.user!.userId,
+      body.id,
+      body.encryptedData,
+      body.iv,
+      body.itemType,
+      body.metadata
+    );
+
+    await db.createAuditLog(req.user!.userId, 'vault_create', { itemType: body.itemType }, req.ip || '', req.headers['user-agent'] || '');
+
+    res.status(201).json({
+      success: true,
+      data: {
+        id: item.id,
+        version: item.version,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+      },
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ success: false, error: 'Invalid input', details: error.errors });
+      return;
+    }
+    console.error('[Vault] Create error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ─── PUT /api/vault/items/:id ───────────────────────────────────
+
+router.put('/items/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const body = updateItemSchema.parse(req.body);
+
+    const result = await db.updateVaultItem(
+      req.user!.userId,
+      req.params.id,
+      body.encryptedData,
+      body.iv,
+      body.metadata || {},
+      body.version
+    );
+
+    if (!result) {
+      res.status(404).json({ success: false, error: 'Item not found' });
+      return;
+    }
+
+    if ('conflict' in result) {
+      res.status(409).json({
+        success: false,
+        error: 'Version conflict',
+        serverVersion: result.serverVersion,
+      });
+      return;
+    }
+
+    await db.createAuditLog(req.user!.userId, 'vault_update', { itemId: req.params.id }, req.ip || '', req.headers['user-agent'] || '');
+
+    res.json({
+      success: true,
+      data: { id: result.id, version: result.version, updatedAt: result.updated_at },
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ success: false, error: 'Invalid input' });
+      return;
+    }
+    console.error('[Vault] Update error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ─── DELETE /api/vault/items/:id ────────────────────────────────
+
+router.delete('/items/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const deleted = await db.deleteVaultItem(req.user!.userId, req.params.id);
+    if (!deleted) {
+      res.status(404).json({ success: false, error: 'Item not found' });
+      return;
+    }
+
+    await db.createAuditLog(req.user!.userId, 'vault_delete', { itemId: req.params.id }, req.ip || '', req.headers['user-agent'] || '');
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[Vault] Delete error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ─── POST /api/vault/sync ───────────────────────────────────────
+
+router.post('/sync', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const items = await db.getVaultItems(req.user!.userId);
+
+    res.json({
+      success: true,
+      data: {
+        items: items.map(item => ({
+          id: item.id,
+          encryptedData: item.encrypted_data,
+          iv: item.iv,
+          itemType: item.item_type,
+          metadata: item.metadata,
+          version: item.version,
+          createdAt: item.created_at,
+          updatedAt: item.updated_at,
+        })),
+        syncTimestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error('[Vault] Sync error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+export default router;

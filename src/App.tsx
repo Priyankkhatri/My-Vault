@@ -10,6 +10,7 @@ import { Settings } from './pages/Settings';
 import { AppLayout } from './components/layout/AppLayout';
 import { CommandPalette } from './features/search/CommandPalette';
 import { ToastContainer } from './components/ui/Toast';
+import { AIAssistantPanel } from './components/ai/AIAssistantPanel';
 import { AnimatePresence } from 'framer-motion';
 
 function AppRoutes() {
@@ -37,6 +38,7 @@ function AppRoutes() {
         </AnimatePresence>
       </AppLayout>
       <CommandPalette />
+      <AIAssistantPanel />
       <ToastContainer />
     </>
   );

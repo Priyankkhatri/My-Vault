@@ -15,35 +15,36 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const inputType = isSensitive ? (showPassword ? 'text' : 'password') : type;
 
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-1.5 w-full">
         {label && (
-          <label className="block text-xs font-medium text-vault-text-secondary uppercase tracking-wider">
+          <label className="block text-xs font-semibold text-vault-gray-500 uppercase tracking-widest pl-1">
             {label}
           </label>
         )}
         <div className="relative">
           {icon && (
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-vault-text-muted">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-vault-gray-400">
               {icon}
             </span>
           )}
           <input
             ref={ref}
             type={inputType}
-            className={`w-full bg-vault-surface-2 border border-vault-border rounded-xl px-4 py-2.5 text-sm text-vault-text placeholder:text-vault-text-muted focus:outline-none focus:border-vault-gold/50 focus:ring-1 focus:ring-vault-gold/20 transition-all duration-200 ${icon ? 'pl-10' : ''} ${isSensitive ? 'pr-10 font-mono' : ''} ${error ? 'border-vault-danger/50' : ''} ${className}`}
+            className={`w-full bg-white border border-vault-gray-300 rounded-lg px-3 py-2 text-sm text-vault-gray-900 placeholder:text-vault-gray-400 focus:outline-none focus:border-vault-primary-500 focus:ring-4 focus:ring-vault-primary-50 transition-all duration-100 ${icon ? 'pl-9' : ''} ${isSensitive ? 'pr-9 font-mono' : ''} ${error ? 'border-red-300 focus:ring-red-50' : ''} ${className}`}
             {...props}
           />
           {isSensitive && (
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-vault-text-muted hover:text-vault-text transition-colors cursor-pointer"
+              tabIndex={-1}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-vault-gray-400 hover:text-vault-gray-600 transition-colors cursor-pointer"
             >
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           )}
         </div>
-        {error && <p className="text-xs text-vault-danger">{error}</p>}
+        {error && <p className="text-xs text-red-500 font-medium pl-1">{error}</p>}
       </div>
     );
   }

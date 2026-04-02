@@ -21,27 +21,25 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-vault-gray-950/20"
             onClick={onClose}
           />
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            initial={{ opacity: 0, scale: 0.98, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            transition={{ duration: 0.2 }}
-            className={`relative w-full ${sizeMap[size]} bg-vault-surface border border-vault-border rounded-2xl shadow-2xl overflow-hidden`}
+            exit={{ opacity: 0, scale: 0.98, y: 8 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className={`relative w-full ${sizeMap[size]} bg-white rounded-2xl shadow-vault-modal overflow-hidden border border-vault-gray-100`}
           >
-            {title && (
-              <div className="flex items-center justify-between px-6 py-4 border-b border-vault-border">
-                <h3 className="text-base font-semibold text-vault-text">{title}</h3>
-                <button
-                  onClick={onClose}
-                  className="p-1 rounded-lg text-vault-text-muted hover:text-vault-text hover:bg-vault-surface-2 transition-colors cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            )}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-vault-gray-100">
+              <h3 className="text-base font-semibold text-vault-gray-900">{title || ''}</h3>
+              <button
+                onClick={onClose}
+                className="p-1 rounded-lg text-vault-gray-400 hover:text-vault-gray-600 hover:bg-vault-gray-50 transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
             <div className="p-6">{children}</div>
           </motion.div>
         </div>
