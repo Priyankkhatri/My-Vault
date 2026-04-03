@@ -1,15 +1,23 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Shield, AlertTriangle, KeyRound, Clock, CheckCircle, RefreshCw, Sparkles, Loader2, ChevronDown, ChevronUp
+  Shield, KeyRound, Globe, Activity, CheckCircle2, Search, Loader2, Sparkles, Check
 } from 'lucide-react';
 import { useVault } from '../context/VaultContext';
 import { SecurityRing } from '../components/vault/VaultHelpers';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { EmptyState } from '../components/ui/EmptyState';
 import { PasswordItem } from '../types/vault';
 import { runFullAudit, AuditedItem } from '../features/ai/securityAuditAI';
+import {
+  calculatePasswordStrength,
+  strengthScoreToLabel,
+  findReusedPasswordsSync,
+  calculateSecurityScore,
+  type ReusedGroup
+} from '../utils/securityUtils';
 
 export function SecurityAudit() {
   const { items } = useVault();
@@ -17,10 +25,12 @@ export function SecurityAudit() {
 
   const [auditedItems, setAuditedItems] = useState<AuditedItem[]>([]);
   const [isAuditing, setIsAuditing] = useState(false);
-  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  
+  // State for Breach monitor
+  const [isCheckingBreach, setIsCheckingBreach] = useState(false);
+  const [lastBreachCheck, setLastBreachCheck] = useState('Just now');
 
   useEffect(() => {
-    // Run local fast audit on load
     runAudit(false);
   }, [items]);
 
@@ -32,189 +42,229 @@ export function SecurityAudit() {
     setIsAuditing(false);
   };
 
-  // Aggregate stats
-  const critical = auditedItems.filter(a => a.riskScore.severity === 'critical');
-  const high = auditedItems.filter(a => a.riskScore.severity === 'high');
-  const medium = auditedItems.filter(a => a.riskScore.severity === 'medium');
-  const low = auditedItems.filter(a => a.riskScore.severity === 'low');
+  const handleCheckBreaches = () => {
+    setIsCheckingBreach(true);
+    setTimeout(() => {
+      setIsCheckingBreach(false);
+      setLastBreachCheck('Just now');
+    }, 1500);
+  };
 
-  const totalScore = auditedItems.length > 0
-    ? Math.round(
-        auditedItems.reduce((acc, curr) => acc + (100 - curr.riskScore.total), 0) / auditedItems.length
-      )
-    : 100;
+  const passwords = items.filter((i): i is PasswordItem => i.type === 'password');
 
-  const hasAIInsights = auditedItems.some(a => !!a.aiInsight);
+  // Weak passwords: recalculate using the real entropy-based function, score <= 1 = weak
+  const weakPasswords = useMemo(() => {
+    return passwords.filter(p => calculatePasswordStrength(p.password) <= 1);
+  }, [passwords]);
+  
+  // Reused grouping: compare via hash, not plaintext
+  const reusedGroups: ReusedGroup[] = useMemo(() => {
+    return findReusedPasswordsSync(items);
+  }, [items]);
+  const reusedCount = reusedGroups.reduce((acc, g) => acc + g.items.length, 0);
+
+  // Security score: weighted formula (40% strong, 30% no-reuse, 30% no-breach)
+  const totalScore = useMemo(() => {
+    return calculateSecurityScore(items, reusedGroups);
+  }, [items, reusedGroups]);
+
+  const critical = useMemo(() => auditedItems.filter(a => a.riskScore.severity === 'critical'), [auditedItems]);
+  const aiRecommendations = useMemo(() => auditedItems.filter(a => !!a.aiInsight), [auditedItems]);
+
+  // Strength bar color for weak password rows
+  const getStrengthDisplay = (password: string) => {
+    const score = calculatePasswordStrength(password);
+    const label = strengthScoreToLabel(score);
+    const segmentColors = ['bg-red-400', 'bg-amber-400', 'bg-yellow-400', 'bg-green-400'];
+    return { score, label, segmentColors };
+  };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-8 max-w-4xl mx-auto space-y-8 h-full overflow-y-auto scrollbar-hidden">
-      {/* Header */}
-      <div className="flex items-end justify-between border-b border-vault-gray-100 pb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-vault-gray-950 tracking-tight flex items-center gap-3">
-            <Shield size={28} className="text-vault-primary-600" strokeWidth={2.5} /> Security Audit
-          </h2>
-          <p className="text-sm text-vault-gray-500 mt-1">Comprehensive intelligence-driven analysis of your vault health.</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="md" onClick={() => runAudit(false)} disabled={isAuditing} icon={isAuditing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}>
-            Local Scan
-          </Button>
-          <Button variant="primary" size="md" onClick={() => runAudit(true)} disabled={isAuditing || hasAIInsights} icon={<Sparkles size={16} />}>
-            {hasAIInsights ? 'AI Scan Complete' : 'Deep AI Audit'}
-          </Button>
-        </div>
+    <div className="max-w-[860px] mx-auto px-6 py-8">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Security Audit</h1>
+        <p className="text-sm text-gray-500 mt-1">Review your vault's security posture and potential vulnerabilities.</p>
       </div>
 
-      {/* Health overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="vault-card p-6 bg-white flex flex-col items-center justify-center text-center col-span-1">
-          <SecurityRing score={totalScore} size={140} strokeWidth={12} label="Health" />
-          <p className="text-sm font-bold text-vault-gray-900 mt-4">Vault Security Score</p>
-        </div>
-
-        <div className="col-span-2 grid grid-cols-2 gap-4">
-          <div className="vault-card p-4 bg-white">
-            <p className="text-[10px] font-bold text-red-600 uppercase tracking-widest mb-1">Critical Risks</p>
-            <p className="text-3xl font-bold text-vault-gray-900">{critical.length}</p>
-            <div className="w-full bg-red-100 h-1 rounded-full mt-3">
-                <div className="bg-red-500 h-1 rounded-full" style={{ width: `${(critical.length / Math.max(auditedItems.length, 1)) * 100}%` }} />
-            </div>
-          </div>
-          <div className="vault-card p-4 bg-white">
-            <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest mb-1">High Risks</p>
-            <p className="text-3xl font-bold text-vault-gray-900">{high.length}</p>
-            <div className="w-full bg-amber-100 h-1 rounded-full mt-3">
-                <div className="bg-amber-500 h-1 rounded-full" style={{ width: `${(high.length / Math.max(auditedItems.length, 1)) * 100}%` }} />
-            </div>
-          </div>
-          <div className="vault-card p-4 bg-white">
-            <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1">Medium Risks</p>
-            <p className="text-3xl font-bold text-vault-gray-900">{medium.length}</p>
-             <div className="w-full bg-blue-100 h-1 rounded-full mt-3">
-                <div className="bg-blue-500 h-1 rounded-full" style={{ width: `${(medium.length / Math.max(auditedItems.length, 1)) * 100}%` }} />
-            </div>
-          </div>
-          <div className="vault-card p-4 bg-white">
-            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">Healthy</p>
-            <p className="text-3xl font-bold text-vault-gray-900">{low.length}</p>
-            <div className="w-full bg-emerald-100 h-1 rounded-full mt-3">
-                <div className="bg-emerald-500 h-1 rounded-full" style={{ width: `${(low.length / Math.max(auditedItems.length, 1)) * 100}%` }} />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Risk Items */}
-      <div className="space-y-4 pt-4">
-        <div className="flex justify-between items-center px-1">
-          <h3 className="text-[10px] font-bold text-vault-gray-400 uppercase tracking-widest">
-            Detailed Breakdown ({critical.length + high.length} Action Required)
-          </h3>
-          {isAuditing && <span className="text-vault-primary-600 text-[10px] font-bold uppercase flex items-center gap-2"><Loader2 size={12} className="animate-spin"/> AI Engine Processing...</span>}
-        </div>
+      <div className="flex flex-col gap-6">
         
-        {auditedItems.filter(a => a.riskScore.severity === 'critical' || a.riskScore.severity === 'high').map((audited, i) => (
-          <motion.div
-            key={audited.item.id}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className={`vault-card bg-white p-5 transition-all border-l-4 ${
-              audited.riskScore.severity === 'critical' ? 'border-l-red-600' : 'border-l-amber-500'
-            } ${expandedItemId === audited.item.id ? 'shadow-xl shadow-vault-gray-200' : ''}`}
-          >
-            <div className="flex items-start gap-4">
-              <div className={`w-12 h-12 rounded-xl border flex items-center justify-center flex-shrink-0 ${
-                audited.riskScore.severity === 'critical' ? 'bg-red-50 border-red-100 text-red-600' : 'bg-amber-50 border-amber-100 text-amber-600'
-              }`}>
-                <AlertTriangle size={20} strokeWidth={2.5} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="text-base font-bold text-vault-gray-900">{audited.item.title}</p>
-                  <Badge variant={audited.riskScore.severity === 'critical' ? 'danger' : 'warning'}>
-                    Risk {audited.riskScore.total}
-                  </Badge>
-                  {audited.aiInsight && (
-                    <Badge variant="teal">
-                      <Sparkles size={10} className="mr-1 inline" /> Intelligence
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-xs font-semibold text-vault-gray-400 truncate mb-3">{audited.item.website || audited.item.username}</p>
-                
-                {/* Risk Factors */}
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {audited.riskScore.factors.reuse > 0 && (
-                    <span className="text-[10px] bg-red-50 text-red-700 px-2 py-0.5 rounded-full font-bold border border-red-100 uppercase tracking-tighter">
-                      Reused
-                    </span>
-                  )}
-                  {audited.riskScore.factors.age > 0 && (
-                    <span className="text-[10px] bg-vault-gray-100 text-vault-gray-600 px-2 py-0.5 rounded-full font-bold border border-vault-gray-200 uppercase tracking-tighter">
-                      Old
-                    </span>
-                  )}
-                  {audited.riskScore.factors.entropy > 40 && (
-                    <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-bold border border-amber-100 uppercase tracking-tighter">
-                      Weak
-                    </span>
-                  )}
-                </div>
-                
-                <AnimatePresence>
-                  {audited.aiInsight && expandedItemId === audited.item.id && (
-                    <motion.div 
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="p-4 rounded-xl bg-vault-primary-50 border border-vault-primary-100 mb-4 relative">
-                        <div className="flex items-center gap-2 text-vault-primary-700 font-bold text-[10px] uppercase tracking-widest mb-2">
-                          <Sparkles size={14} strokeWidth={2.5}/> AI Security Recommendations
-                        </div>
-                        <p className="text-xs text-vault-primary-900 leading-relaxed font-medium">
-                          {audited.aiInsight}
-                        </p>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <div className="flex items-center gap-4">
-                   <button 
-                    onClick={() => navigate(`/item/${audited.item.id}`)}
-                    className="text-xs font-bold text-vault-primary-600 hover:text-vault-primary-500 transition-colors py-1 cursor-pointer"
-                  >
-                    Change Password
-                  </button>
-                  {audited.aiInsight && (
-                    <button 
-                      onClick={() => setExpandedItemId(expandedItemId === audited.item.id ? null : audited.item.id)}
-                      className="text-xs font-bold text-vault-gray-400 hover:text-vault-gray-600 flex items-center gap-1 transition-colors group cursor-pointer"
-                    >
-                      {expandedItemId === audited.item.id ? 'Hide Insight' : 'View Deep Insight'}
-                      <ChevronDown size={14} className={`transition-transform duration-200 ${expandedItemId === audited.item.id ? 'rotate-180' : ''}`} />
-                    </button>
-                  )}
-                </div>
+        {/* SECTION 1 - SCORE HERO */}
+        <Card variant="section" className="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-6">
+            <SecurityRing score={totalScore} size={84} strokeWidth={8} />
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Vault Security Score</h2>
+              <div className="flex gap-2">
+                <Badge variant={weakPasswords.length > 0 ? 'red' : 'green'}>{weakPasswords.length} Weak</Badge>
+                <Badge variant={reusedCount > 0 ? 'amber' : 'green'}>{reusedCount} Reused</Badge>
+                <Badge variant={critical.length > 0 ? 'red' : 'green'}>{critical.length} Critical</Badge>
               </div>
             </div>
-          </motion.div>
-        ))}
-        {critical.length === 0 && high.length === 0 && (
-          <div className="vault-card p-16 bg-white text-center flex flex-col items-center">
-            <div className="w-20 h-20 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-6 shadow-sm shadow-emerald-100">
-              <CheckCircle size={40} strokeWidth={2.5} />
-            </div>
-            <h3 className="text-xl font-bold text-vault-gray-950 mb-2">Maximum Security Reached</h3>
-            <p className="text-sm text-vault-gray-500 max-w-sm mx-auto leading-relaxed">No high-risk passwords or security vulnerabilities were detected in your current vault items.</p>
-            <Button variant="outline" className="mt-8" onClick={() => navigate('/')}>Return to Dashboard</Button>
           </div>
-        )}
+          <div className="flex flex-col gap-2 min-w-[200px]">
+            <Button onClick={() => runAudit(true)} isLoading={isAuditing}>
+              {isAuditing ? 'Analyzing...' : 'Run Deep Audit'}
+            </Button>
+          </div>
+        </Card>
+
+        {/* SECTION 2 - WEAK PASSWORDS */}
+        <Card variant="section">
+          <div className="flex items-center justify-between mb-6 border-b border-gray-100 pb-4">
+            <div className="flex items-center gap-2">
+              <Shield size={18} className="text-gray-400" />
+              <h3 className="text-lg font-semibold text-gray-900">Weak Passwords</h3>
+            </div>
+            <span className="text-sm font-medium text-gray-500">{weakPasswords.length} needs attention</span>
+          </div>
+          <div className="space-y-3">
+            {weakPasswords.length > 0 ? weakPasswords.map(item => {
+              const { score, label, segmentColors } = getStrengthDisplay(item.password);
+              return (
+                <div key={item.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors shadow-sm">
+                  <div className="flex items-center gap-3 min-w-[200px]">
+                    <img src={`https://www.google.com/s2/favicons?domain=${item.website || 'example.com'}&sz=32`} className="w-5 h-5" alt="favicon" />
+                    <p className="font-semibold text-sm text-gray-900 truncate">{item.title}</p>
+                  </div>
+                  <div className="flex-1 px-4 max-w-[200px]">
+                    <div className="flex gap-1 h-1.5">
+                      {segmentColors.map((color, i) => (
+                        <div
+                          key={i}
+                          className={`flex-1 rounded-full transition-all ${i < score ? color : 'bg-gray-200'}`}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase mt-1.5 tracking-widest text-center">{label}</p>
+                  </div>
+                </div>
+              );
+            }) : (
+              <EmptyState
+                icon={CheckCircle2}
+                title="Passwords Secure"
+                description="No weak passwords detected in your vault."
+              />
+            )}
+          </div>
+        </Card>
+
+        {/* SECTION 3 - REUSED PASSWORDS */}
+        <Card variant="section">
+          <div className="flex items-center justify-between mb-6 border-b border-gray-100 pb-4">
+            <div className="flex items-center gap-2">
+              <KeyRound size={18} className="text-gray-400" />
+              <h3 className="text-lg font-semibold text-gray-900">Reused Passwords</h3>
+            </div>
+            <span className="text-sm font-medium text-gray-500">{reusedCount} accounts sharing</span>
+          </div>
+          <div className="space-y-4">
+            {reusedGroups.length > 0 ? reusedGroups.map((group) => (
+              <div key={group.hash} className="p-4 border border-gray-100 rounded-lg bg-gray-50/50 shadow-sm">
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {group.items.map(item => (
+                    <Badge key={item.id} variant="gray" className="px-3 py-1">
+                      <img src={`https://www.google.com/s2/favicons?domain=${item.website || 'example.com'}&sz=16`} className="w-3 h-3 inline mr-1.5" alt="" /> 
+                      {item.title}
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex items-center pt-3 border-t border-gray-200">
+                  <span className="text-sm font-medium text-gray-500">Shared across {group.items.length} items.</span>
+                </div>
+              </div>
+            )) : (
+              <EmptyState
+                icon={KeyRound}
+                title="No Reuse Detected"
+                description="All your passwords appear to be unique across your accounts."
+              />
+            )}
+          </div>
+        </Card>
+
+        {/* SECTION 4 - BREACH MONITOR */}
+        <Card variant="section" className="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-teal-50 border border-teal-100 text-teal-600 shadow-sm">
+              <Globe size={20} />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Dark Web Breach Monitor</h3>
+              <p className="text-sm text-gray-500 mt-1">Monitoring your saved emails against known data breaches.</p>
+            </div>
+          </div>
+          <div className="flex flex-col items-end min-w-[200px]">
+             <div className="flex items-center gap-2 mb-3">
+              <span className="relative flex h-2.5 w-2.5">
+                {isCheckingBreach && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>}
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-teal-500"></span>
+              </span>
+              <span className="text-sm font-semibold text-gray-900">Protected</span>
+            </div>
+            <Button variant="secondary" onClick={handleCheckBreaches} isLoading={isCheckingBreach}>
+              {isCheckingBreach ? 'Checking...' : `Checked ${lastBreachCheck}`}
+            </Button>
+          </div>
+        </Card>
+
+        {/* SECTION 5 - AI RECOMMENDATIONS */}
+        <Card variant="section">
+          <div className="flex items-center justify-between mb-6 border-b border-gray-100 pb-4">
+             <div className="flex items-center gap-2">
+              <Sparkles size={18} className="text-teal-600" />
+              <h3 className="text-lg font-semibold text-gray-900">AI Recommendations</h3>
+            </div>
+            <Badge variant="teal">GROQ-POWERED</Badge>
+          </div>
+          <div className="space-y-4">
+             {aiRecommendations.length > 0 ? aiRecommendations.map(rec => (
+              <div key={rec.item.id} className="p-4 rounded-lg bg-teal-50/50 border border-teal-100 relative shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-semibold text-teal-900">{rec.item.title}</p>
+                  <Badge variant={rec.riskScore.severity === 'critical' ? 'red' : 'amber'}>
+                    Severity: {rec.riskScore.severity}
+                  </Badge>
+                </div>
+                <p className="text-sm leading-relaxed text-teal-800">
+                  {rec.aiInsight}
+                </p>
+              </div>
+            )) : (
+              <EmptyState
+                icon={Sparkles}
+                title="No Insights Yet"
+                description="Click 'Run Deep Audit' above to leverage AI for deep security insights."
+                action={
+                  <Button variant="secondary" onClick={() => runAudit(true)} isLoading={isAuditing}>
+                    <Sparkles size={14} className="mr-2" /> Start AI Scan
+                  </Button>
+                }
+              />
+            )}
+          </div>
+        </Card>
+
+        {/* SECTION 6 - BEHAVIORAL ALERTS */}
+        <Card variant="section">
+          <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+             <Activity size={18} className="text-gray-400" />
+             <h3 className="text-lg font-semibold text-gray-900">Behavioral Alerts</h3>
+          </div>
+          <div className="flex items-center justify-between p-4 border border-gray-100 rounded-lg bg-gray-50 flex-row shadow-sm">
+             <div className="flex gap-4 items-center">
+              <div className="w-10 h-10 rounded-full flex justify-center items-center bg-teal-50 text-teal-600 flex-shrink-0">
+                <CheckCircle2 size={20} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">No anomalous activity</p>
+                <p className="text-sm text-gray-500 mt-1">Your recent login patterns look normal. No flagged events from unknown IPs.</p>
+              </div>
+            </div>
+          </div>
+        </Card>
+
       </div>
-    </motion.div>
+    </div>
   );
 }

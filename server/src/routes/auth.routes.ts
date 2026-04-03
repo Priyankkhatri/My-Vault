@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { z } from 'zod';
 import * as db from '../db/store.js';
-import { generateAccessToken, generateRefreshToken, type AuthPayload } from '../middleware/auth.js';
+import { generateAccessToken, generateRefreshToken, type AuthPayload, authMiddleware } from '../middleware/auth.js';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 
@@ -99,6 +99,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
         expiresIn: 900, // 15 minutes in seconds
         user: { id: user.id, email: user.email },
         kdfParams: { salt: body.salt, iterations: body.kdfParams.iterations },
+        sessionId: refreshHash, // Using refreshHash as a proxy for session identification if needed, or better, the session.id
       },
     });
   } catch (error) {
@@ -121,7 +122,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     if (!user) {
       // Timing-safe: still hash to prevent timing attacks
       await bcrypt.hash(body.authHash, 12);
-      res.status(401).json({ success: false, error: 'Invalid credentials' });
+      res.status(401).json({ success: false, error: 'Account not found' });
       return;
     }
 
@@ -157,6 +158,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
         expiresIn: 900,
         user: { id: user.id, email: user.email },
         kdfParams: { salt: user.kdf_salt, iterations: (user.kdf_params as any).iterations || 600000 },
+        sessionId: refreshHash,
       },
     });
   } catch (error) {
@@ -205,7 +207,7 @@ router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
 
     res.json({
       success: true,
-      data: { accessToken: newAccessToken, refreshToken: newRefreshToken, expiresIn: 900 },
+      data: { accessToken: newAccessToken, refreshToken: newRefreshToken, expiresIn: 900, sessionId: newHash },
     });
   } catch (error) {
     console.error('[Auth] Refresh error:', error);
@@ -228,6 +230,64 @@ router.post('/logout', async (req: Request, res: Response): Promise<void> => {
     res.json({ success: true });
   } catch (error) {
     console.error('[Auth] Logout error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ─── POST /api/auth/change-password ─────────────────────────────
+
+const changePasswordSchema = z.object({
+  oldAuthHash: z.string().min(64).max(128),
+  newAuthHash: z.string().min(64).max(128),
+  salt: z.string().min(20),
+  kdfParams: z.object({ iterations: z.number().min(100000) }),
+});
+
+router.post('/change-password', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const body = changePasswordSchema.parse(req.body);
+    const user = await db.findUserById(req.user!.userId);
+
+    if (!user) {
+      res.status(404).json({ success: false, error: 'User not found' });
+      return;
+    }
+
+    const validAuth = await bcrypt.compare(body.oldAuthHash, user.auth_hash);
+    if (!validAuth) {
+      res.status(401).json({ success: false, error: 'Invalid current password' });
+      return;
+    }
+
+    const serverHash = await bcrypt.hash(body.newAuthHash, 12);
+    await db.updateUserAuth(user.id, serverHash, body.salt, body.kdfParams);
+    
+    await db.createAuditLog(user.id, 'password_change', {}, req.ip || '', req.headers['user-agent'] || '');
+
+    res.json({ success: true });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ success: false, error: 'Invalid input' });
+      return;
+    }
+    console.error('[Auth] Change password error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ─── DELETE /api/auth/account ───────────────────────────────────
+
+router.delete('/account', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Optionally, could require authHash here for re-verification, but simple authMiddleware is enough for this phase
+    const deleted = await db.deleteUser(req.user!.userId);
+    if (deleted) {
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ success: false, error: 'User not found' });
+    }
+  } catch (error) {
+    console.error('[Auth] Account delete error:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });

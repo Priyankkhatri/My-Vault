@@ -1,26 +1,29 @@
-import { ReactNode } from 'react';
-import { motion } from 'framer-motion';
+import React from 'react';
+import { LucideIcon } from 'lucide-react';
+import { Card } from './Card';
 
 interface EmptyStateProps {
-  icon: ReactNode;
+  icon: LucideIcon;
   title: string;
   description: string;
-  action?: ReactNode;
+  action?: React.ReactNode;
 }
 
-export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
+export function EmptyState({ icon: Icon, title, description, action }: EmptyStateProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center justify-center py-16 px-6"
-    >
-      <div className="w-16 h-16 rounded-2xl bg-vault-surface-2 border border-vault-border flex items-center justify-center text-vault-text-muted mb-4">
-        {icon}
+    <Card variant="empty">
+      <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center text-gray-300 mb-4 transition-transform hover:scale-105 duration-300">
+        <Icon size={32} strokeWidth={1.5} />
       </div>
-      <h3 className="text-base font-semibold text-vault-text mb-1">{title}</h3>
-      <p className="text-sm text-vault-text-muted text-center max-w-xs mb-6">{description}</p>
-      {action}
-    </motion.div>
+      <h3 className="text-base font-bold text-gray-900 mb-1.5">{title}</h3>
+      <p className="text-sm text-gray-700 font-medium max-w-[280px] mb-6 leading-relaxed text-center">
+        {description}
+      </p>
+      {action && (
+        <div className="animate-in fade-in zoom-in duration-500 delay-150 fill-mode-both">
+          {action}
+        </div>
+      )}
+    </Card>
   );
 }

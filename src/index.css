@@ -1,147 +1,24 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 @theme {
-  /* Colors - Primary (Teal) */
-  --color-vault-primary-50: #f0fdfa;
-  --color-vault-primary-100: #ccfbf1;
-  --color-vault-primary-200: #99f6e4;
-  --color-vault-primary-300: #5eead4;
-  --color-vault-primary-400: #2dd4bf;
-  --color-vault-primary-500: #14b8a6;
-  --color-vault-primary-600: #0d9488;
-  --color-vault-primary-700: #0f766e;
-  --color-vault-primary-800: #115e59;
-  --color-vault-primary-900: #134e4a;
-
-  /* Colors - Neutrals */
-  --color-vault-gray-50: #f9fafb;
-  --color-vault-gray-100: #f3f4f6;
-  --color-vault-gray-200: #e5e7eb;
-  --color-vault-gray-300: #d1d5db;
-  --color-vault-gray-400: #9ca3af;
-  --color-vault-gray-500: #6b7280;
-  --color-vault-gray-600: #4b5563;
-  --color-vault-gray-700: #374151;
-  --color-vault-gray-800: #1f2937;
-  --color-vault-gray-900: #111827;
-  --color-vault-gray-950: #0c0f0f;
-
-  /* Use Mapping */
-  --color-vault-bg: var(--color-vault-gray-50);
-  --color-vault-surface: #ffffff;
-  --color-vault-surface-2: var(--color-vault-gray-50);
-  --color-vault-border: var(--color-vault-gray-200);
-  --color-vault-border-strong: var(--color-vault-gray-300);
-  
-  --color-vault-text: var(--color-vault-gray-950);
-  --color-vault-text-secondary: var(--color-vault-gray-600);
-  --color-vault-text-muted: var(--color-vault-gray-400);
-  
-  --color-vault-teal: var(--color-vault-primary-600);
-  --color-vault-teal-hover: var(--color-vault-primary-500);
-  --color-vault-teal-light: var(--color-vault-primary-50);
-
-  /* Status Colors */
-  --color-vault-success: #10b981;
-  --color-vault-warning: #f59e0b;
-  --color-vault-danger: #ef4444;
-  --color-vault-info: #3b82f6;
-
-  /* Shadows */
-  --shadow-vault-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  --shadow-vault-modal: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-
-  /* Radii */
-  --radius-vault-card: 12px;
-  --radius-vault-btn: 8px;
-  --radius-vault-modal: 16px;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+html, body {
+  background-color: #F9FAFB;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
-body {
-  background-color: var(--color-vault-bg);
-  color: var(--color-vault-text);
-  min-width: 400px;
-  min-height: 600px;
-  overflow-x: hidden;
-}
-
-#root {
-  min-height: 600px;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--color-vault-border);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-vault-border-light);
-}
-
-::selection {
-  background-color: var(--color-vault-primary-100);
-  color: var(--color-vault-primary-700);
-}
-
-/* Custom Utilities */
-.vault-card {
-  background-color: var(--color-vault-surface);
-  border: 1px solid var(--color-vault-border);
-  border-radius: var(--radius-vault-card);
-  box-shadow: var(--shadow-vault-card);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.vault-card:hover {
-  border-color: var(--color-vault-gray-300);
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  transform: translateY(-1px);
-}
-
-.vault-input {
-  width: 100%;
-  background-color: var(--color-vault-surface);
-  border: 1px solid var(--color-vault-border-strong);
-  border-radius: var(--radius-vault-btn);
-  padding: 0.625rem 0.75rem;
-  font-size: 0.875rem;
-  color: var(--color-vault-text);
-  transition: all 0.1s ease;
-}
-
-.vault-input:focus {
-  outline: none;
-  border-color: var(--color-vault-primary-500);
-  box-shadow: 0 0 0 3px var(--color-vault-primary-100);
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.2s ease-out forwards;
 }

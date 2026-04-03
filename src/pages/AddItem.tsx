@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -6,15 +6,20 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Card } from '../components/ui/Card';
 import { useVault } from '../context/VaultContext';
 import { VaultCategory, VaultItem } from '../types/vault';
+import { calculatePasswordStrength, getPasswordStrengthLabel, strengthScoreToLabel } from '../utils/securityUtils';
+import { analyzePassword } from '../../packages/crypto/src/entropy';
+import { aiPasswordAnalyze, aiCategorize } from '../services/vaultService';
+import { hasQuota, invalidateQuotaCache } from '../features/ai/quotaTracker';
 
 const itemTypes = [
-  { type: 'password' as VaultCategory, icon: KeyRound, label: 'Password', desc: 'Login credentials for websites & apps', color: 'text-vault-primary-600', bg: 'bg-vault-primary-50 border-vault-primary-100' },
-  { type: 'address' as VaultCategory, icon: MapPin, label: 'Address', desc: 'Physical storage for autofill data', color: 'text-blue-600', bg: 'bg-blue-50 border-blue-100' },
-  { type: 'card' as VaultCategory, icon: CreditCard, label: 'Card', desc: 'Secure credit & debit card details', color: 'text-purple-600', bg: 'bg-purple-50 border-purple-100' },
-  { type: 'note' as VaultCategory, icon: FileText, label: 'Secure Note', desc: 'Encrypted private text content', color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100' },
-  { type: 'document' as VaultCategory, icon: FolderLock, label: 'Document', desc: 'AES-256 cloud file storage', color: 'text-orange-600', bg: 'bg-orange-50 border-orange-100' },
+  { type: 'password' as VaultCategory, icon: KeyRound, label: 'Password', desc: 'Login credentials for websites & apps' },
+  { type: 'address' as VaultCategory, icon: MapPin, label: 'Address', desc: 'Physical storage for autofill data' },
+  { type: 'card' as VaultCategory, icon: CreditCard, label: 'Card', desc: 'Secure credit & debit card details' },
+  { type: 'note' as VaultCategory, icon: FileText, label: 'Secure Note', desc: 'Encrypted private text content' },
+  { type: 'document' as VaultCategory, icon: FolderLock, label: 'Document', desc: 'AES-256 cloud file storage' },
 ];
 
 function generatePassword(length = 20): string {
@@ -26,25 +31,148 @@ function generatePassword(length = 20): string {
 export function AddItem() {
   const { type: preselectedType } = useParams<{ type?: string }>();
   const navigate = useNavigate();
-  const { addItem } = useVault();
+  const { addItem, addToast } = useVault();
 
   const [step, setStep] = useState(preselectedType ? 2 : 1);
   const [selectedType, setSelectedType] = useState<VaultCategory | null>(
     preselectedType as VaultCategory || null
   );
   const [formData, setFormData] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
   const [tags, setTags] = useState('');
+  const [passwordInsight, setPasswordInsight] = useState<string | null>(null);
+  const [localPasswordScore, setLocalPasswordScore] = useState(0);
+  const [localStrengthLabel, setLocalStrengthLabel] = useState('weak');
 
-  const updateField = (key: string, val: string) => setFormData(prev => ({ ...prev, [key]: val }));
+  const updateField = (key: string, val: string) => {
+    setFormData(prev => ({ ...prev, [key]: val }));
+    if (errors[key]) {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+  };
 
-  const handleSave = () => {
+  // Handle AI error statuses
+  const handleAIError = (status?: number) => {
+    if (status === 401) addToast('AI features unavailable — check your API key in .env', 'error');
+    else if (status === 429) addToast('AI quota reached — try again later', 'error');
+    else addToast('AI service unavailable', 'error');
+  };
+
+  // 1. Debounced Local Strength Calculation (300ms)
+  useEffect(() => {
+    const password = formData.password || '';
+    if (!password) {
+      setLocalPasswordScore(0);
+      setLocalStrengthLabel('weak');
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      const score = calculatePasswordStrength(password);
+      setLocalPasswordScore(score);
+      setLocalStrengthLabel(strengthScoreToLabel(score));
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [formData.password]);
+
+  // 2. Debounced AI Password Analysis (500ms) + Cleanup
+  useEffect(() => {
+    const password = formData.password || '';
+    const abortController = new AbortController();
+
+    if (!password) {
+      setPasswordInsight(null);
+      return;
+    }
+
+    const score = calculatePasswordStrength(password);
+    if (score > 2) {
+      setPasswordInsight(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const quotaOk = await hasQuota('password_analysis');
+        if (!quotaOk) return;
+
+        const entropy = analyzePassword(password);
+        const res = await aiPasswordAnalyze(entropy.score, entropy.flags, abortController.signal);
+        
+        if (res.success && res.data) {
+          setPasswordInsight(res.data.analysis);
+          invalidateQuotaCache();
+        } else if (!res.success && res.error !== 'Network error') {
+          handleAIError(res.status);
+        }
+      } catch (err: any) {
+        if (err.name !== 'AbortError') console.error('AI Analysis failed:', err);
+      }
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+      abortController.abort();
+    };
+  }, [formData.password]);
+
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+    if (selectedType === 'password') {
+      if (!formData.title) newErrors.title = 'Site name is required';
+      if (!formData.username) newErrors.username = 'Username or email is required';
+      if (!formData.password) newErrors.password = 'Password is required';
+    } else if (selectedType === 'address') {
+      if (!formData.title) newErrors.title = 'Label is required';
+      if (!formData.fullName) newErrors.fullName = 'Full name is required';
+    } else if (selectedType === 'card') {
+      if (!formData.cardName) newErrors.cardName = 'Financial label is required';
+      if (!formData.number) newErrors.number = 'Card number is required';
+    } else if (selectedType === 'note') {
+      if (!formData.title) newErrors.title = 'Note title is required';
+      if (!formData.content) newErrors.content = 'Content is required';
+    } else if (selectedType === 'document') {
+      if (!formData.fileName) newErrors.fileName = 'Document name is required';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validate()) {
+      addToast('Please correct the errors before saving', 'error');
+      setStep(2);
+      return;
+    }
+    setIsSaving(true);
     const now = new Date().toISOString();
+    let finalTags = tags.split(',').map(t => t.trim()).filter(Boolean);
+
+    if (finalTags.length === 0 && (formData.title || formData.website)) {
+      const quotaOk = await hasQuota('categorization');
+      if (quotaOk) {
+        const res = await aiCategorize(formData.title || formData.website || '', formData.url || '');
+        if (res.success && res.data) {
+          finalTags.push(res.data.category);
+          invalidateQuotaCache();
+        } else if (!res.success) {
+          handleAIError(res.status);
+        }
+      }
+    }
+
     const base = {
       id: `item-${Date.now()}`,
       type: selectedType!,
       title: formData.title || formData.siteName || formData.cardName || formData.fileName || 'Untitled',
       favorite: false,
-      tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+      tags: finalTags,
       folder: formData.folder || '',
       notes: formData.notes || '',
       createdAt: now,
@@ -52,49 +180,75 @@ export function AddItem() {
     };
 
     let item: VaultItem;
-    switch (selectedType) {
-      case 'password':
-        item = { ...base, type: 'password', website: formData.website || '', url: formData.url || '', username: formData.username || '', password: formData.password || '', strength: getStrength(formData.password || '') } as any;
-        break;
-      case 'address':
-        item = { ...base, type: 'address', fullName: formData.fullName || '', phone: formData.phone || '', addressLine1: formData.addressLine1 || '', addressLine2: formData.addressLine2, city: formData.city || '', state: formData.state || '', country: formData.country || '', zipCode: formData.zipCode || '' } as any;
-        break;
-      case 'card':
-        item = { ...base, type: 'card', cardName: formData.cardName || '', cardholderName: formData.cardholderName || '', number: formData.number || '', expiry: formData.expiry || '', cvv: formData.cvv || '', billingAddress: formData.billingAddress } as any;
-        break;
-      case 'note':
-        item = { ...base, type: 'note', content: formData.content || '', sensitive: true } as any;
-        break;
-      case 'document':
-        item = { ...base, type: 'document', fileName: formData.fileName || '', fileSize: '0 KB', fileType: 'application/octet-stream', encrypted: true } as any;
-        break;
-      default:
-        return;
+    try {
+      switch (selectedType) {
+        case 'password':
+          item = { ...base, type: 'password', website: formData.website || '', url: formData.url || '', username: formData.username || '', password: formData.password || '', strength: getPasswordStrengthLabel(formData.password || '') } as any;
+          break;
+        case 'address':
+          item = { ...base, type: 'address', fullName: formData.fullName || '', phone: formData.phone || '', addressLine1: formData.addressLine1 || '', addressLine2: formData.addressLine2, city: formData.city || '', state: formData.state || '', country: formData.country || '', zipCode: formData.zipCode || '' } as any;
+          break;
+        case 'card':
+          item = { ...base, type: 'card', cardName: formData.cardName || '', cardholderName: formData.cardholderName || '', number: formData.number || '', expiry: formData.expiry || '', cvv: formData.cvv || '', billingAddress: formData.billingAddress } as any;
+          break;
+        case 'note':
+          item = { ...base, type: 'note', content: formData.content || '', sensitive: true } as any;
+          break;
+        case 'document':
+          item = { ...base, type: 'document', fileName: formData.fileName || '', fileSize: '0 KB', fileType: 'application/octet-stream', encrypted: true } as any;
+          break;
+        default: return;
+      }
+      await addItem(item);
+      navigate('/vault');
+    } catch (err) {
+      addToast('Failed to save item', 'error');
+    } finally {
+      setIsSaving(false);
     }
-    addItem(item);
-    navigate('/vault');
   };
 
-  const getStrength = (pw: string): 'weak' | 'fair' | 'strong' | 'excellent' => {
-    if (pw.length < 8) return 'weak';
-    if (pw.length < 12) return 'fair';
-    if (pw.length < 16 || !/[!@#$%^&*]/.test(pw)) return 'strong';
-    return 'excellent';
-  };
+  const segmentColors = ['bg-red-400', 'bg-amber-400', 'bg-yellow-400', 'bg-green-400'];
 
   const renderFields = () => {
     switch (selectedType) {
       case 'password':
         return (
-          <div className="space-y-5">
-            <Input label="Site Name" placeholder="e.g. Google" value={formData.title || ''} onChange={e => updateField('title', e.target.value)} />
+          <div className="space-y-4">
+            <Input label="Site Name" placeholder="e.g. Google" value={formData.title || ''} onChange={e => updateField('title', e.target.value)} error={errors.title} />
             <Input label="Website Domain" placeholder="google.com" value={formData.website || ''} onChange={e => updateField('website', e.target.value)} />
-            <Input label="Username / Email" placeholder="user@email.com" value={formData.username || ''} onChange={e => updateField('username', e.target.value)} />
-            <div className="space-y-2">
-              <Input label="Secure Password" sensitive placeholder="••••••••••••" value={formData.password || ''} onChange={e => updateField('password', e.target.value)} />
+            <Input label="Login URL" placeholder="https://google.com/login" value={formData.url || ''} onChange={e => updateField('url', e.target.value)} />
+            <Input label="Username / Email" placeholder="user@email.com" value={formData.username || ''} onChange={e => updateField('username', e.target.value)} error={errors.username} />
+            <div className="space-y-1.5">
+              <Input type="password" label="Secure Password" placeholder="••••••••••••" value={formData.password || ''} onChange={e => updateField('password', e.target.value)} error={errors.password} />
+              {(formData.password || '').length > 0 && (
+                <div className="space-y-1.5 mt-2">
+                  <div className="flex gap-1.5 h-1.5">
+                    {segmentColors.map((color, i) => (
+                      <div
+                        key={i}
+                        className={`flex-1 rounded-full transition-all duration-300 ${i < localPasswordScore ? color : 'bg-gray-200'}`}
+                      />
+                    ))}
+                  </div>
+                  <p className={`text-[10px] font-bold uppercase tracking-widest ${
+                    localStrengthLabel === 'weak' ? 'text-red-500' :
+                    localStrengthLabel === 'fair' ? 'text-amber-500' :
+                    localStrengthLabel === 'strong' ? 'text-yellow-600' :
+                    'text-green-500'
+                  }`}>{localStrengthLabel}</p>
+                  {passwordInsight && (
+                    <div className="mt-2 p-2.5 rounded-lg bg-teal-50 border border-teal-100 flex gap-2 items-start">
+                      <Wand2 size={14} className="text-teal-600 shrink-0 mt-0.5" />
+                      <p className="text-[11px] text-teal-800 font-medium leading-relaxed">{passwordInsight}</p>
+                    </div>
+                  )}
+                </div>
+              )}
               <button
+                type="button"
                 onClick={() => updateField('password', generatePassword())}
-                className="flex items-center gap-1.5 text-[10px] font-bold text-vault-primary-600 uppercase tracking-widest hover:text-vault-primary-500 cursor-pointer transition-colors"
+                className="flex items-center gap-1.5 text-[11px] font-semibold text-teal-600 hover:text-teal-700 uppercase tracking-widest cursor-pointer mt-2"
               >
                 <Wand2 size={12} strokeWidth={2.5} /> Generate High Entropy Key
               </button>
@@ -103,9 +257,9 @@ export function AddItem() {
         );
       case 'address':
         return (
-          <div className="space-y-5">
-            <Input label="Label" placeholder="e.g. Primary Residence" value={formData.title || ''} onChange={e => updateField('title', e.target.value)} />
-            <Input label="Full Name" placeholder="Alex Morgan" value={formData.fullName || ''} onChange={e => updateField('fullName', e.target.value)} />
+          <div className="space-y-4">
+            <Input label="Label" placeholder="e.g. Primary Residence" value={formData.title || ''} onChange={e => updateField('title', e.target.value)} error={errors.title} />
+            <Input label="Full Name" placeholder="Alex Morgan" value={formData.fullName || ''} onChange={e => updateField('fullName', e.target.value)} error={errors.fullName} />
             <Input label="Phone Number" placeholder="+1 (555) 000-0000" value={formData.phone || ''} onChange={e => updateField('phone', e.target.value)} />
             <Input label="Address Line 1" placeholder="742 Evergreen Terrace" value={formData.addressLine1 || ''} onChange={e => updateField('addressLine1', e.target.value)} />
             <div className="grid grid-cols-2 gap-4">
@@ -120,44 +274,45 @@ export function AddItem() {
         );
       case 'card':
         return (
-          <div className="space-y-5">
-            <Input label="Financial Label" placeholder="e.g. Visa Corporate" value={formData.cardName || ''} onChange={e => updateField('cardName', e.target.value)} />
+          <div className="space-y-4">
+            <Input label="Financial Label" placeholder="e.g. Visa Corporate" value={formData.cardName || ''} onChange={e => updateField('cardName', e.target.value)} error={errors.cardName} />
             <Input label="Cardholder Name" placeholder="ALEX MORGAN" value={formData.cardholderName || ''} onChange={e => updateField('cardholderName', e.target.value)} />
-            <Input label="Card Number" sensitive placeholder="•••• •••• •••• ••••" value={formData.number || ''} onChange={e => updateField('number', e.target.value)} />
+            <Input type="password" label="Card Number" placeholder="•••• •••• •••• ••••" value={formData.number || ''} onChange={e => updateField('number', e.target.value)} error={errors.number} />
             <div className="grid grid-cols-2 gap-4">
               <Input label="Expiry Date" placeholder="MM / YY" value={formData.expiry || ''} onChange={e => updateField('expiry', e.target.value)} />
-              <Input label="CVV" sensitive placeholder="•••" value={formData.cvv || ''} onChange={e => updateField('cvv', e.target.value)} />
+              <Input type="password" label="CVV" placeholder="•••" value={formData.cvv || ''} onChange={e => updateField('cvv', e.target.value)} />
             </div>
           </div>
         );
       case 'note':
         return (
-          <div className="space-y-5">
-            <Input label="Note Title" placeholder="e.g. Recovery Phrases" value={formData.title || ''} onChange={e => updateField('title', e.target.value)} />
-            <div className="space-y-2">
-              <label className="block text-[10px] font-bold text-vault-gray-400 uppercase tracking-widest">Secure Content</label>
+          <div className="space-y-4">
+            <Input label="Note Title" placeholder="e.g. Recovery Phrases" value={formData.title || ''} onChange={e => updateField('title', e.target.value)} error={errors.title} />
+            <div className="space-y-1.5">
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 ${errors.content ? 'text-red-500' : 'text-gray-500'}`}>Secure Content</label>
               <textarea
                 placeholder="Paste your sensitive content here..."
                 value={formData.content || ''}
                 onChange={e => updateField('content', e.target.value)}
                 rows={8}
-                className="w-full bg-white border border-vault-gray-200 rounded-2xl px-4 py-4 text-sm text-vault-gray-950 placeholder:text-vault-gray-400 focus:outline-none focus:border-vault-primary-500 focus:ring-4 focus:ring-vault-primary-50 resize-none transition-all"
+                className={`w-full bg-white border ${errors.content ? 'border-red-500 ring-4 ring-red-50' : 'border-gray-200 focus:border-teal-600 focus:ring-4 focus:ring-teal-50'} rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none transition-all duration-200 resize-none shadow-sm`}
               />
+              {errors.content && <p className="text-[11px] font-bold text-red-500 mt-1.5 flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-red-500" /> {errors.content}</p>}
             </div>
           </div>
         );
       case 'document':
         return (
-          <div className="space-y-5">
-            <Input label="Document Name" placeholder="identity_scan.pdf" value={formData.fileName || ''} onChange={e => updateField('fileName', e.target.value)} />
-            <div className="space-y-2">
-              <label className="block text-[10px] font-bold text-vault-gray-400 uppercase tracking-widest">Internal Security Protocol</label>
-              <div className="border-2 border-dashed border-vault-gray-200 rounded-2xl p-10 text-center hover:border-vault-primary-300 hover:bg-vault-primary-50 transition-all cursor-pointer group">
-                <div className="w-16 h-16 bg-vault-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-vault-primary-100 transition-colors">
-                  <FolderLock size={32} className="text-vault-gray-400 group-hover:text-vault-primary-600 transition-colors" />
+          <div className="space-y-4">
+            <Input label="Document Name" placeholder="identity_scan.pdf" value={formData.fileName || ''} onChange={e => updateField('fileName', e.target.value)} error={errors.fileName} />
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5">Internal Security Protocol</label>
+              <div className="border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 hover:bg-gray-100 hover:border-gray-400 transition-colors p-10 text-center cursor-pointer group shadow-sm">
+                <div className="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center mx-auto mb-4">
+                  <FolderLock size={32} className="text-gray-400 group-hover:text-gray-600 transition-colors" />
                 </div>
-                <p className="text-sm font-bold text-vault-gray-900 mb-1">Click to securely append file</p>
-                <p className="text-xs text-vault-gray-400">All documents are AES-256 encrypted Client-side</p>
+                <p className="text-sm font-semibold text-gray-900 mb-1">Click to securely append file</p>
+                <p className="text-xs text-gray-500">All documents are AES-256 encrypted Client-side</p>
               </div>
             </div>
           </div>
@@ -166,159 +321,66 @@ export function AddItem() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-xl mx-auto p-8 h-full overflow-y-auto scrollbar-hidden">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <button onClick={() => navigate(-1)} className="p-2.5 rounded-xl bg-white border border-vault-gray-200 text-vault-gray-400 hover:text-vault-gray-900 hover:border-vault-gray-300 shadow-sm transition-all cursor-pointer">
-          <ArrowLeft size={20} strokeWidth={2.5} />
-        </button>
-        <div>
-          <h2 className="text-2xl font-bold text-vault-gray-950 tracking-tight">Create Secure Entry</h2>
-          <p className="text-sm font-bold text-vault-primary-600 uppercase tracking-widest mt-0.5">Phase {step} <span className="text-vault-gray-300">/ 3</span></p>
+    <div className="max-w-[860px] mx-auto px-6 py-8">
+      <div className="max-w-xl mx-auto">
+        <div className="flex items-center gap-4 mb-8">
+          <button onClick={() => navigate(-1)} className="p-2 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500"><ArrowLeft size={20} /></button>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 leading-tight">Create Secure Entry</h2>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">Phase {step} <span className="text-gray-300">/ 3</span></p>
+          </div>
         </div>
-      </div>
-
-      {/* Step indicator */}
-      <div className="flex items-center gap-2 mb-10">
-        {[1, 2, 3].map(s => (
-          <div key={s} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${s <= step ? 'bg-vault-primary-600 shadow-sm shadow-vault-primary-100' : 'bg-vault-gray-100'}`} />
-        ))}
-      </div>
-
-      <AnimatePresence mode="wait">
-        {/* Step 1: Choose type */}
-        {step === 1 && (
-          <motion.div
-            key="step1"
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            className="space-y-3"
-          >
-            <h3 className="text-[10px] font-bold text-vault-gray-400 uppercase tracking-widest mb-5 px-1">Infrastructure Selection</h3>
-            {itemTypes.map(it => (
-              <button
-                key={it.type}
-                onClick={() => { setSelectedType(it.type); setStep(2); }}
-                className="w-full group flex items-center gap-5 p-5 rounded-2xl bg-white border border-vault-gray-200 hover:border-vault-primary-500 hover:shadow-xl hover:shadow-vault-gray-100 transition-all cursor-pointer text-left relative overflow-hidden"
-              >
-                <div className={`w-14 h-14 rounded-xl border flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 ${it.bg} ${it.color}`}>
-                  <it.icon size={28} strokeWidth={2.5} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-base font-bold text-vault-gray-900 leading-none mb-1.5">{it.label}</p>
-                  <p className="text-xs font-medium text-vault-gray-400">{it.desc}</p>
-                </div>
-                <ChevronRight size={20} className="text-vault-gray-300 group-hover:text-vault-primary-500 transition-colors" />
-              </button>
-            ))}
-          </motion.div>
-        )}
-
-        {/* Step 2: Fill details */}
-        {step === 2 && selectedType && (
-          <motion.div
-            key="step2"
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 10 }}
-            className="space-y-8"
-          >
-             <div className="bg-white p-6 rounded-2xl border border-vault-gray-200 shadow-sm">
-                <h3 className="text-[10px] font-bold text-vault-gray-400 uppercase tracking-widest mb-6 border-b border-vault-gray-50 pb-3">Identification & Attributes</h3>
-                {renderFields()}
-             </div>
-
-             <div className="bg-white p-6 rounded-2xl border border-vault-gray-200 shadow-sm">
-                <h3 className="text-[10px] font-bold text-vault-gray-400 uppercase tracking-widest mb-6 border-b border-vault-gray-50 pb-3">Classification & Meta</h3>
-                <div className="space-y-6">
-                  <Input label="Search Keywords (Tags)" placeholder="e.g. Work, Finance, Social (comma separated)" value={tags} onChange={e => setTags(e.target.value)} />
-                  <Input label="Directory Folder" placeholder="e.g. Master Vault" value={formData.folder || ''} onChange={e => updateField('folder', e.target.value)} />
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-bold text-vault-gray-400 uppercase tracking-widest">Additional Context</label>
-                    <textarea
-                      placeholder="Enter optional metadata or remarks..."
-                      value={formData.notes || ''}
-                      onChange={e => updateField('notes', e.target.value)}
-                      rows={3}
-                      className="w-full bg-white border border-vault-gray-200 rounded-2xl px-4 py-3 text-sm text-vault-gray-950 placeholder:text-vault-gray-400 focus:outline-none focus:border-vault-primary-500 focus:ring-4 focus:ring-vault-primary-50 resize-none transition-all"
-                    />
-                  </div>
-                </div>
-             </div>
-
-            <div className="flex gap-4 pt-4 pb-20">
-              <Button variant="secondary" onClick={() => setStep(1)} className="flex-1">
-                <ArrowLeft size={16} /> Back
-              </Button>
-              <Button onClick={() => setStep(3)} className="flex-1">
-                Security Review <ArrowRight size={16} />
-              </Button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Step 3: Review & Save */}
-        {step === 3 && selectedType && (
-          <motion.div
-            key="step3"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
-            className="space-y-8 pb-20"
-          >
-            <div className="vault-card bg-white p-8 relative overflow-hidden border border-vault-gray-200 shadow-xl">
-              <div className="absolute top-0 left-0 w-2 h-full bg-vault-primary-600" />
-              <div className="flex items-center gap-5 mb-8">
-                {(() => {
-                  const typeInfo = itemTypes.find(t => t.type === selectedType)!;
-                  return (
-                    <>
-                      <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center shadow-sm ${typeInfo.bg} ${typeInfo.color}`}>
-                        <typeInfo.icon size={28} strokeWidth={2.5} />
-                      </div>
+        <div className="flex items-center gap-2 mb-10">
+          {[1, 2, 3].map(s => (<div key={s} className={`h-1.5 flex-1 rounded-full ${s <= step ? 'bg-teal-600' : 'bg-gray-200'}`} />))}
+        </div>
+        <AnimatePresence mode="wait">
+          {step === 1 && (
+            <motion.div key="step1" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-4">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4 px-1">Infrastructure Selection</h3>
+              <div className="space-y-3">
+                {itemTypes.map(it => (
+                  <button key={it.type} onClick={() => { setSelectedType(it.type); setStep(2); }} className="w-full flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl hover:border-teal-500 hover:shadow-sm transition-all text-left group shadow-sm">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center text-gray-500 group-hover:bg-teal-50 group-hover:text-teal-600 transition-colors"><it.icon size={24} /></div>
                       <div>
-                        <p className="text-lg font-bold text-vault-gray-950 leading-tight">{formData.title || formData.siteName || formData.cardName || formData.fileName || 'Untitled Entry'}</p>
-                        <p className="text-xs font-bold text-vault-primary-600 uppercase tracking-widest mt-1">{typeInfo.label} Object</p>
+                        <p className="text-base font-semibold text-gray-900 mb-0.5">{it.label}</p>
+                        <p className="text-sm font-medium text-gray-500">{it.desc}</p>
                       </div>
-                    </>
-                  );
-                })()}
-              </div>
-
-              <div className="space-y-4">
-                 {Object.entries(formData).filter(([k, v]) => v && !['title', 'folder', 'notes'].includes(k)).map(([k, v]) => (
-                  <div key={k} className="flex justify-between py-3 border-b border-vault-gray-50 last:border-0 group transition-all">
-                    <span className="text-[10px] text-vault-gray-400 font-bold uppercase tracking-widest pt-1">{k.replace(/([A-Z])/g, ' $1')}</span>
-                    <span className="text-sm font-bold text-vault-gray-900 truncate max-w-[70%] text-right bg-vault-gray-50 px-3 py-1 rounded-lg">
-                      {['password', 'cvv'].includes(k.toLowerCase()) ? '••••••••••••' : v}
-                    </span>
-                  </div>
+                    </div>
+                    <ChevronRight size={20} className="text-gray-300 group-hover:text-teal-500" />
+                  </button>
                 ))}
               </div>
-            </div>
-
-            <div className="bg-vault-primary-50 border border-vault-primary-100 p-6 rounded-2xl flex items-start gap-4">
-                <div className="p-2 bg-vault-primary-100 rounded-lg text-vault-primary-600">
-                    <Check size={20} strokeWidth={2.5} />
+            </motion.div>
+          )}
+          {step === 2 && selectedType && (
+            <motion.div key="step2" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-6">
+              <Card variant="section"><h3 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-6 border-b border-gray-100 pb-3">Identification & Attributes</h3>{renderFields()}</Card>
+              <Card variant="section">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-6 border-b border-gray-100 pb-3">Classification & Meta</h3>
+                <div className="space-y-4">
+                  <Input label="Search Keywords (Tags)" placeholder="e.g. Work, Finance, Social" value={tags} onChange={e => setTags(e.target.value)} />
+                  <Input label="Directory Folder" placeholder="e.g. Master Vault" value={formData.folder || ''} onChange={e => updateField('folder', e.target.value)} />
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5">Additional Context</label>
+                    <textarea placeholder="Enter optional metadata..." value={formData.notes || ''} onChange={e => updateField('notes', e.target.value)} rows={3} className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-teal-600 focus:ring-4 focus:ring-teal-50 transition-all resize-none shadow-sm" />
+                  </div>
                 </div>
-                <div>
-                   <p className="text-sm font-bold text-vault-primary-900 mb-1">Zero-Knowledge Verification</p>
-                   <p className="text-xs text-vault-primary-700 leading-relaxed font-medium">All sensitive attributes will be encrypted with your Master Key before being transmitted to the secure cloud directory.</p>
-                </div>
-            </div>
-
-            <div className="flex gap-4">
-              <Button variant="secondary" onClick={() => setStep(2)} className="flex-1">
-                Modify Detail
-              </Button>
-              <Button onClick={handleSave} icon={<Check size={18} strokeWidth={2.5} />} className="flex-1">
-                Finalize & Save
-              </Button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+              </Card>
+              <div className="flex gap-4 pt-4 mb-20"><Button variant="secondary" onClick={() => setStep(1)} className="w-1/3 justify-center"><ArrowLeft size={16} className="mr-2" /> Back</Button><Button onClick={() => validate() && setStep(3)} className="w-2/3 justify-center">Security Review <ArrowRight size={16} className="ml-2" /></Button></div>
+            </motion.div>
+          )}
+          {step === 3 && selectedType && (
+            <motion.div key="step3" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="space-y-6">
+              <Card variant="section" className="relative overflow-hidden"><div className="absolute top-0 left-0 w-2 h-full bg-teal-600" /><div className="flex items-center gap-4 mb-8">
+                {(() => { const typeInfo = itemTypes.find(t => t.type === selectedType)!; return (<><div className="w-12 h-12 rounded-lg bg-teal-50 flex items-center justify-center text-teal-600"><typeInfo.icon size={24} /></div><div><p className="text-lg font-bold text-gray-900">{formData.title || formData.siteName || formData.cardName || formData.fileName || 'Untitled Entry'}</p><p className="text-xs font-semibold text-teal-600 uppercase tracking-widest mt-1">{typeInfo.label} Object</p></div></>); })()}
+              </div><div className="space-y-4">{Object.entries(formData).filter(([k, v]) => v && !['title', 'folder', 'notes'].includes(k)).map(([k, v]) => (<div key={k} className="flex justify-between py-3 border-b border-gray-100 last:border-0 group"><span className="text-xs text-gray-500 font-semibold uppercase tracking-widest">{k.replace(/([A-Z])/g, ' $1')}</span><span className="text-sm font-semibold text-gray-900 truncate max-w-[60%] text-right font-mono">{['password', 'cvv'].includes(k.toLowerCase()) ? '••••••••••••' : v}</span></div>))}</div></Card>
+              <div className="rounded-xl border border-teal-200 bg-teal-50 p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4"><div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 shrink-0 shadow-sm"><Check size={20} /></div><div><p className="text-sm font-bold text-teal-900 mb-1">Zero-Knowledge Verification</p><p className="text-xs text-teal-700 font-medium">All sensitive attributes will be encrypted with your Master Key before being transmitted to the secure cloud directory.</p></div></div>
+              <div className="flex gap-4 mb-20"><Button variant="secondary" onClick={() => setStep(2)} className="w-1/3 justify-center" disabled={isSaving}>Modify Detail</Button><Button onClick={handleSave} className="w-2/3 justify-center" isLoading={isSaving}>{isSaving ? 'Saving...' : 'Finalize & Save'}</Button></div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
   );
 }

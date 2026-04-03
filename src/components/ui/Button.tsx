@@ -1,41 +1,43 @@
-import { ButtonHTMLAttributes, forwardRef } from 'react';
-import { motion } from 'framer-motion';
+import React from 'react';
+import { Loader2 } from 'lucide-react';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
-type ButtonSize = 'sm' | 'md' | 'lg';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'icon';
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
-  size?: ButtonSize;
-  icon?: React.ReactNode;
+  children: React.ReactNode;
+  isLoading?: boolean;
 }
 
-const variantStyles: Record<ButtonVariant, string> = {
-  primary: 'bg-vault-teal text-white hover:bg-vault-teal-hover active:scale-[0.98]',
-  secondary: 'bg-white text-vault-gray-700 border border-vault-gray-300 hover:bg-vault-gray-50',
-  ghost: 'text-vault-gray-600 hover:bg-vault-gray-100',
-  danger: 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100',
-  outline: 'bg-transparent border border-vault-gray-300 text-vault-gray-700 hover:bg-gray-50',
-};
+export function Button({ 
+  variant = 'primary', 
+  children, 
+  className = '', 
+  disabled, 
+  isLoading,
+  ...props 
+}: ButtonProps) {
+  const baseClasses = 'inline-flex items-center justify-center text-sm font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-teal-500';
+  
+  const variantClasses = {
+    primary: 'bg-teal-600 hover:bg-teal-500 text-white px-4 py-2 shadow-sm',
+    secondary: 'bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 px-4 py-2',
+    ghost: 'hover:bg-gray-100 text-gray-600 px-4 py-2',
+    danger: 'bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 px-4 py-2 focus:ring-red-500',
+    icon: 'p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600'
+  };
 
-const sizeStyles: Record<ButtonSize, string> = {
-  sm: 'px-3 py-1.5 text-xs rounded-lg gap-1.5 h-8',
-  md: 'px-4 py-2 text-sm rounded-lg gap-2 h-10',
-  lg: 'px-6 py-2.5 text-base rounded-lg gap-2 h-12',
-};
+  const isDisabled = disabled || isLoading;
+  const disabledClasses = isDisabled ? 'opacity-50 cursor-not-allowed' : '';
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = 'primary', size = 'md', icon, children, className = '', ...props }, ref) => {
-    return (
-      <motion.button
-        ref={ref}
-        whileTap={{ scale: 0.98 }}
-        className={`inline-flex items-center justify-center font-medium transition-all duration-100 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
-        {...(props as any)}
-      >
-        {icon && <span className="flex-shrink-0">{icon}</span>}
-        {children && <span className="truncate">{children}</span>}
-      </motion.button>
-    );
-  }
-);
+  return (
+    <button
+      className={`${baseClasses} ${variantClasses[variant]} ${disabledClasses} ${className}`}
+      disabled={isDisabled}
+      {...props}
+    >
+      {isLoading && <Loader2 size={16} className="animate-spin mr-2" />}
+      {children}
+    </button>
+  );
+}

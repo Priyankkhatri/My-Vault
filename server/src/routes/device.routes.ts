@@ -32,17 +32,42 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
 router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
-    const deleted = await db.deleteDeviceSession(req.user!.userId, req.params.id);
+    const deleted = await db.deleteDeviceSession(req.user!.userId, req.params.id as string);
     if (!deleted) {
       res.status(404).json({ success: false, error: 'Session not found' });
       return;
     }
 
-    await db.createAuditLog(req.user!.userId, 'device_revoke', { sessionId: req.params.id }, req.ip || '', req.headers['user-agent'] || '');
+    await db.createAuditLog(req.user!.userId, 'device_revoke', { sessionId: req.params.id }, req.ip || '', (req.headers['user-agent'] as string) || '');
 
     res.json({ success: true });
   } catch (error) {
     console.error('[Device] Delete error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// ─── DELETE /api/devices ────────────────────────────────────────
+
+router.delete('/', async (req: Request, res: Response): Promise<void> => {
+  try {
+    // To identify the current session, we look at where req.user came from.
+    // authMiddleware sets req.user.session id if we modify it, but wait!
+    // We only have the accessToken. The session logic is tied to refresh token.
+    // For simplicity, we just look up the session by IP/UserAgent
+    // Or better yet, we pass the current session ID.
+    const { currentSessionId } = req.body;
+    if (!currentSessionId) {
+       res.status(400).json({ success: false, error: 'currentSessionId is required' });
+       return;
+    }
+
+    const count = await db.deleteOtherDeviceSessions(req.user!.userId, currentSessionId);
+    await db.createAuditLog(req.user!.userId, 'device_revoke_all', { revokedCount: count }, req.ip || '', (req.headers['user-agent'] as string) || '');
+    
+    res.json({ success: true, data: { revokedCount: count } });
+  } catch (error) {
+    console.error('[Device] Delete all error:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });

@@ -8,14 +8,14 @@
 import { aiCategorize } from '../../services/vaultService';
 
 const CATEGORY_MAP: Record<string, string[]> = {
-  banking: ['bank', 'chase', 'wells fargo', 'paypal', 'venmo', 'stripe', 'plaid'],
-  social: ['facebook', 'instagram', 'twitter', 'tiktok', 'linkedin', 'reddit', 'discord'],
-  developer: ['github', 'gitlab', 'stackoverflow', 'npm', 'vercel', 'aws', 'azure', 'docker'],
-  shopping: ['amazon', 'ebay', 'walmart', 'target', 'shopify', 'etsy'],
-  travel: ['airbnb', 'booking', 'expedia', 'airline', 'uber', 'lyft'],
-  email: ['gmail', 'outlook', 'yahoo', 'protonmail', 'icloud'],
-  work: ['slack', 'zoom', 'teams', 'jira', 'confluence', 'notion', 'figma'],
-  entertainment: ['netflix', 'spotify', 'youtube', 'disney', 'hbo', 'twitch', 'steam'],
+ banking: ['bank', 'chase', 'wells fargo', 'paypal', 'venmo', 'stripe', 'plaid'],
+ social: ['facebook', 'instagram', 'twitter', 'tiktok', 'linkedin', 'reddit', 'discord'],
+ developer: ['github', 'gitlab', 'stackoverflow', 'npm', 'vercel', 'aws', 'azure', 'docker'],
+ shopping: ['amazon', 'ebay', 'walmart', 'target', 'shopify', 'etsy'],
+ travel: ['airbnb', 'booking', 'expedia', 'airline', 'uber', 'lyft'],
+ email: ['gmail', 'outlook', 'yahoo', 'protonmail', 'icloud'],
+ work: ['slack', 'zoom', 'teams', 'jira', 'confluence', 'notion', 'figma'],
+ entertainment: ['netflix', 'spotify', 'youtube', 'disney', 'hbo', 'twitch', 'steam'],
 };
 
 /**
@@ -23,34 +23,34 @@ const CATEGORY_MAP: Record<string, string[]> = {
  * Falls back to AI only if local fails.
  */
 export function localCategorize(name: string, url: string): string | null {
-  const combined = `${name} ${url}`.toLowerCase();
+ const combined = `${name} ${url}`.toLowerCase();
 
-  for (const [category, keywords] of Object.entries(CATEGORY_MAP)) {
-    if (keywords.some(kw => combined.includes(kw))) {
-      return category;
-    }
-  }
+ for (const [category, keywords] of Object.entries(CATEGORY_MAP)) {
+ if (keywords.some(kw => combined.includes(kw))) {
+ return category;
+ }
+ }
 
-  return null; // No match — needs AI
+ return null; // No match — needs AI
 }
 
 /**
  * Categorize a vault item using local rules + AI fallback.
  */
 export async function categorizeVaultItem(name: string, url: string): Promise<string> {
-  // Try local first (instant, no API cost)
-  const localResult = localCategorize(name, url);
-  if (localResult) return localResult;
+ // Try local first (instant, no API cost)
+ const localResult = localCategorize(name, url);
+ if (localResult) return localResult;
 
-  // Fallback to AI
-  try {
-    const res = await aiCategorize(name, url);
-    if (res.success && res.data) {
-      return res.data.category;
-    }
-  } catch (error) {
-    console.error('[AI Categorizer] Error:', error);
-  }
+ // Fallback to AI
+ try {
+ const res = await aiCategorize(name, url);
+ if (res.success && res.data) {
+ return res.data.category;
+ }
+ } catch (error) {
+ console.error('[AI Categorizer] Error:', error);
+ }
 
-  return 'other';
+ return 'other';
 }

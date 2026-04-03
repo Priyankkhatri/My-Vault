@@ -18,4 +18,9 @@ export default defineConfig({
       },
     },
   },
+  server: {
+    watch: {
+      ignored: ['**/server/**'],
+    },
+  },
 })

@@ -7,6 +7,10 @@
  */
 
 import { v4 as uuid } from 'uuid';
+import fs from 'fs';
+import path from 'path';
+
+const DB_PATH = path.join(process.cwd(), 'dev-db.json');
 
 // ─── In-Memory Tables ───────────────────────────────────────────
 
@@ -71,6 +75,36 @@ const store = {
   auditLogs: [] as AuditLogRow[],
 };
 
+// ─── Persistence Layer ──────────────────────────────────────────
+
+function saveToDisk() {
+  const data = {
+    users: Array.from(store.users.entries()),
+    vaultItems: Array.from(store.vaultItems.entries()),
+    deviceSessions: Array.from(store.deviceSessions.entries()),
+    aiQuotas: Array.from(store.aiQuotas.entries()),
+    auditLogs: store.auditLogs,
+  };
+  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+}
+
+function loadFromDisk() {
+  if (!fs.existsSync(DB_PATH)) return;
+  try {
+    const data = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
+    store.users = new Map(data.users);
+    store.vaultItems = new Map(data.vaultItems);
+    store.deviceSessions = new Map(data.deviceSessions);
+    store.aiQuotas = new Map(data.aiQuotas);
+    store.auditLogs = data.auditLogs;
+  } catch (err) {
+    console.error('Failed to load dev-db.json:', err);
+  }
+}
+
+// Initial load
+loadFromDisk();
+
 // ─── User Operations ────────────────────────────────────────────
 
 export async function createUser(email: string, authHash: string, salt: string, kdfParams: Record<string, unknown>) {
@@ -78,6 +112,7 @@ export async function createUser(email: string, authHash: string, salt: string, 
   const now = new Date();
   const user: UserRow = { id, email, auth_hash: authHash, kdf_salt: salt, kdf_params: kdfParams, created_at: now, updated_at: now };
   store.users.set(id, user);
+  saveToDisk();
   return user;
 }
 
@@ -92,6 +127,40 @@ export async function findUserById(id: string) {
   return store.users.get(id) || null;
 }
 
+export async function updateUserAuth(userId: string, authHash: string, kdfSalt: string, kdfParams: Record<string, unknown>) {
+  const user = store.users.get(userId);
+  if (user) {
+    user.auth_hash = authHash;
+    user.kdf_salt = kdfSalt;
+    user.kdf_params = kdfParams;
+    user.updated_at = new Date();
+    saveToDisk();
+    return true;
+  }
+  return false;
+}
+
+export async function deleteUser(userId: string) {
+  if (store.users.has(userId)) {
+    store.users.delete(userId);
+    // Cascade delete vault items
+    for (const [itemId, item] of store.vaultItems.entries()) {
+      if (item.user_id === userId) store.vaultItems.delete(itemId);
+    }
+    // Cascade delete sessions
+    for (const [sessionId, session] of store.deviceSessions.entries()) {
+      if (session.user_id === userId) store.deviceSessions.delete(sessionId);
+    }
+    // AI Quotas
+    for (const [key, quota] of store.aiQuotas.entries()) {
+      if (quota.user_id === userId) store.aiQuotas.delete(key);
+    }
+    saveToDisk();
+    return true;
+  }
+  return false;
+}
+
 // ─── Vault Item Operations ──────────────────────────────────────
 
 export async function createVaultItem(
@@ -104,6 +173,7 @@ export async function createVaultItem(
     metadata, version: 1, created_at: now, updated_at: now,
   };
   store.vaultItems.set(id, item);
+  saveToDisk();
   return item;
 }
 
@@ -134,6 +204,7 @@ export async function updateVaultItem(
   item.metadata = metadata;
   item.version += 1;
   item.updated_at = new Date();
+  saveToDisk();
   return item;
 }
 
@@ -141,6 +212,7 @@ export async function deleteVaultItem(userId: string, itemId: string) {
   const item = store.vaultItems.get(itemId);
   if (item && item.user_id === userId) {
     store.vaultItems.delete(itemId);
+    saveToDisk();
     return true;
   }
   return false;
@@ -159,6 +231,7 @@ export async function createDeviceSession(
     created_at: new Date(),
   };
   store.deviceSessions.set(id, session);
+  saveToDisk();
   return session;
 }
 
@@ -174,6 +247,7 @@ export async function updateSessionRefreshHash(sessionId: string, newHash: strin
   if (session) {
     session.refresh_token_hash = newHash;
     session.last_active = new Date();
+    saveToDisk();
   }
 }
 
@@ -189,9 +263,22 @@ export async function deleteDeviceSession(userId: string, sessionId: string) {
   const session = store.deviceSessions.get(sessionId);
   if (session && session.user_id === userId) {
     store.deviceSessions.delete(sessionId);
+    saveToDisk();
     return true;
   }
   return false;
+}
+
+export async function deleteOtherDeviceSessions(userId: string, currentSessionId: string) {
+  let deletedCount = 0;
+  for (const [sessionId, session] of store.deviceSessions.entries()) {
+    if (session.user_id === userId && sessionId !== currentSessionId) {
+      store.deviceSessions.delete(sessionId);
+      deletedCount++;
+    }
+  }
+  if (deletedCount > 0) saveToDisk();
+  return deletedCount;
 }
 
 // ─── AI Quota Operations ────────────────────────────────────────
@@ -209,10 +296,12 @@ export async function incrementQuota(userId: string, feature: string) {
   const existing = store.aiQuotas.get(key);
   if (existing) {
     existing.usage_count += 1;
+    saveToDisk();
     return existing.usage_count;
   }
   const row: AIQuotaRow = { id: uuid(), user_id: userId, feature, usage_count: 1, quota_date: today };
   store.aiQuotas.set(key, row);
+  saveToDisk();
   return 1;
 }
 
@@ -227,6 +316,7 @@ export async function createAuditLog(
     ip_address: ipAddress, user_agent: userAgent, created_at: new Date(),
   };
   store.auditLogs.push(log);
+  saveToDisk();
   return log;
 }
 

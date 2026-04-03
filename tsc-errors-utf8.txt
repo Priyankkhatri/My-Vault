@@ -1,0 +1,53 @@
+﻿src/components/ai/AIAssistantPanel.tsx(113,2): error TS1003: Identifier expected.
+src/components/ai/AIAssistantPanel.tsx(113,4): error TS1136: Property assignment expected.
+src/components/ai/AIAssistantPanel.tsx(113,10): error TS1005: '}' expected.
+src/components/ai/AIAssistantPanel.tsx(113,50): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/ai/AIAssistantPanel.tsx(113,51): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/ai/AIAssistantPanel.tsx(115,2): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/ai/AIAssistantPanel.tsx(212,4): error TS17002: Expected corresponding JSX closing tag for 'AnimatePresence'.
+src/components/ai/AIAssistantPanel.tsx(213,3): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/ai/AIAssistantPanel.tsx(214,4): error TS17015: Expected corresponding closing tag for JSX fragment.
+src/components/ai/AIAssistantPanel.tsx(215,2): error TS1109: Expression expected.
+src/components/ai/AIAssistantPanel.tsx(215,4): error TS1109: Expression expected.
+src/components/ai/AIAssistantPanel.tsx(216,2): error TS1109: Expression expected.
+src/components/layout/Sidebar.tsx(25,2): error TS1003: Identifier expected.
+src/components/layout/Sidebar.tsx(25,4): error TS1005: '...' expected.
+src/components/ui/Modal.tsx(31,2): error TS1003: Identifier expected.
+src/components/ui/Modal.tsx(33,2): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/ui/Modal.tsx(44,4): error TS17002: Expected corresponding JSX closing tag for 'div'.
+src/components/ui/Modal.tsx(45,2): error TS1005: ')' expected.
+src/components/ui/Modal.tsx(45,4): error TS17002: Expected corresponding JSX closing tag for 'AnimatePresence'.
+src/components/ui/Modal.tsx(47,2): error TS1128: Declaration or statement expected.
+src/components/ui/Modal.tsx(48,2): error TS1109: Expression expected.
+src/components/ui/Modal.tsx(49,1): error TS1128: Declaration or statement expected.
+src/components/ui/Toggle.tsx(32,2): error TS1003: Identifier expected.
+src/components/ui/Toggle.tsx(33,3): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/vault/VaultItemCard.tsx(43,2): error TS1003: Identifier expected.
+src/components/vault/VaultItemCard.tsx(43,4): error TS1005: '...' expected.
+src/features/search/CommandPalette.tsx(105,2): error TS1003: Identifier expected.
+src/features/search/CommandPalette.tsx(107,2): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/features/search/CommandPalette.tsx(191,4): error TS17002: Expected corresponding JSX closing tag for 'div'.
+src/features/search/CommandPalette.tsx(192,2): error TS1005: ')' expected.
+src/features/search/CommandPalette.tsx(192,4): error TS17002: Expected corresponding JSX closing tag for 'AnimatePresence'.
+src/features/search/CommandPalette.tsx(194,2): error TS1128: Declaration or statement expected.
+src/features/search/CommandPalette.tsx(195,2): error TS1109: Expression expected.
+src/features/search/CommandPalette.tsx(196,1): error TS1128: Declaration or statement expected.
+src/pages/ItemDetail.tsx(59,2): error TS1003: Identifier expected.
+src/pages/ItemDetail.tsx(61,3): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/pages/LockScreen.tsx(44,2): error TS1003: Identifier expected.
+src/pages/LockScreen.tsx(46,2): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/pages/LockScreen.tsx(51,2): error TS1003: Identifier expected.
+src/pages/LockScreen.tsx(53,2): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/pages/LockScreen.tsx(76,4): error TS17002: Expected corresponding JSX closing tag for 'div'.
+src/pages/LockScreen.tsx(82,2): error TS1005: ')' expected.
+src/pages/LockScreen.tsx(129,2): error TS1003: Identifier expected.
+src/pages/LockScreen.tsx(131,3): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/pages/LockScreen.tsx(158,2): error TS1128: Declaration or statement expected.
+src/pages/LockScreen.tsx(161,7): error TS1005: ';' expected.
+src/pages/LockScreen.tsx(162,11): error TS1005: ';' expected.
+src/pages/LockScreen.tsx(162,20): error TS1434: Unexpected keyword or identifier.
+src/pages/LockScreen.tsx(162,35): error TS1434: Unexpected keyword or identifier.
+src/pages/LockScreen.tsx(162,39): error TS1005: ';' expected.
+src/pages/LockScreen.tsx(163,2): error TS1128: Declaration or statement expected.
+src/pages/LockScreen.tsx(164,2): error TS1109: Expression expected.
+src/pages/LockScreen.tsx(165,2): error TS1109: Expression expected.

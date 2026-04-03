@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
-import { Copy, Check } from 'lucide-react';
+import { Copy, CheckCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 
 interface CopyButtonProps {
   value: string;
@@ -16,15 +17,16 @@ export function CopyButton({ value, label, size = 14 }: CopyButtonProps) {
       await navigator.clipboard.writeText(value);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // fallback
+    } catch (err) {
+      console.error('Clipboard permission denied or failed:', err);
+      toast.error('Failed to copy to clipboard');
     }
   }, [value]);
 
   return (
     <button
       onClick={handleCopy}
-      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-vault-text-muted hover:text-vault-gold hover:bg-vault-gold/5 transition-all duration-200 cursor-pointer"
+      className="inline-flex items-center gap-1.5 px-2 py-1 text-gray-500 hover:text-gray-900 cursor-pointer transition-colors"
       title={label || 'Copy'}
     >
       <AnimatePresence mode="wait">
@@ -35,7 +37,7 @@ export function CopyButton({ value, label, size = 14 }: CopyButtonProps) {
             animate={{ scale: 1 }}
             exit={{ scale: 0 }}
           >
-            <Check size={size} className="text-vault-success" />
+            <CheckCheck size={size} className="text-green-600" />
           </motion.span>
         ) : (
           <motion.span
@@ -48,7 +50,7 @@ export function CopyButton({ value, label, size = 14 }: CopyButtonProps) {
           </motion.span>
         )}
       </AnimatePresence>
-      {label && <span className="text-xs">{copied ? 'Copied!' : label}</span>}
+      {label && <span className="text-xs font-medium">{copied ? 'Copied!' : label}</span>}
     </button>
   );
 }

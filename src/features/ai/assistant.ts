@@ -18,7 +18,7 @@ export interface ChatMessage {
   timestamp: number;
 }
 
-// ─── Conversation State ─────────────────────────────────────────
+// ─── Conversation State ──────────────────────────────────────────
 
 let conversationHistory: ChatMessage[] = [];
 
@@ -65,7 +65,7 @@ export async function sendMessage(
   if (vaultContext) {
     messages.unshift({
       role: 'user' as const,
-      content: `[CONTEXT] Vault stats: ${vaultContext.totalItems} total items, ${vaultContext.weakPasswords} weak passwords, health score ${vaultContext.healthScore}/100, ${vaultContext.oldPasswords} passwords older than 6 months, ${vaultContext.reusedCount} reused passwords. Use this context to give relevant advice.`,
+      content: `[CONTEXT] Vault stats: ${vaultContext.totalItems} total items, ${vaultContext.weakPasswords} weak passwords, health score ${vaultContext.healthScore}, ${vaultContext.oldPasswords} passwords older than 6 months, ${vaultContext.reusedCount} reused passwords. Use this context to give relevant advice.`,
     });
   }
 
@@ -75,9 +75,11 @@ export async function sendMessage(
     const assistantMsg: ChatMessage = {
       id: `msg-${Date.now() + 1}`,
       role: 'assistant',
-      content: res.success && res.data
+      content: res.success && res.data && res.data.message?.trim()
         ? res.data.message
-        : 'I apologize, I\'m having trouble connecting right now. Please try again in a moment.',
+        : res.success 
+          ? 'I processed your request but don\'t have a specific recommendation right now. Is there anything specific about your vault security you\'d like to know?'
+          : 'I apologize, I\'m having trouble connecting right now. Please try again in a moment.',
       timestamp: Date.now(),
     };
 

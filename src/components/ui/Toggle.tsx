@@ -1,37 +1,33 @@
-import { motion } from 'framer-motion';
+import React from 'react';
 
 interface ToggleProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
-  label?: string;
-  description?: string;
+  disabled?: boolean;
 }
 
-export function Toggle({ checked, onChange, label, description }: ToggleProps) {
+export function Toggle({ checked, onChange, disabled = false }: ToggleProps) {
   return (
-    <label className="flex items-center gap-4 cursor-pointer group select-none">
-      {(label || description) && (
-        <div className="flex-1 min-w-0">
-          {label && <p className="text-sm font-bold text-vault-gray-900 leading-none">{label}</p>}
-          {description && <p className="text-[11px] font-medium text-vault-gray-400 mt-1.5 leading-relaxed">{description}</p>}
-        </div>
-      )}
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onChange(!checked)}
-        className={`relative w-11 h-6 rounded-full transition-all duration-300 flex-shrink-0 cursor-pointer shadow-inner ${
-          checked ? 'bg-vault-primary-600 ring-2 ring-vault-primary-100' : 'bg-vault-gray-200 hover:bg-vault-gray-300'
-        }`}
-      >
-        <motion.div
-          layout
-          className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-md cursor-pointer"
-          animate={{ left: checked ? 24 : 4 }}
-          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-        />
-      </button>
-    </label>
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={`
+        relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out
+        focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2
+        ${checked ? 'bg-teal-500' : 'bg-gray-200'}
+        ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+      `}
+    >
+      <span
+        aria-hidden="true"
+        className={`
+          pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out
+          ${checked ? 'translate-x-5' : 'translate-x-1'}
+        `}
+      />
+    </button>
   );
 }

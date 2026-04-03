@@ -1,51 +1,72 @@
-import { InputHTMLAttributes, forwardRef, useState } from 'react';
+import React, { useState, forwardRef } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
+  helper?: string;
   error?: string;
-  sensitive?: boolean;
-  icon?: React.ReactNode;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, sensitive, icon, className = '', type, ...props }, ref) => {
+  ({ label, helper, error, type = 'text', className = '', ...props }, ref) => {
     const [showPassword, setShowPassword] = useState(false);
-    const isSensitive = sensitive || type === 'password';
-    const inputType = isSensitive ? (showPassword ? 'text' : 'password') : type;
+    const [isFocused, setIsFocused] = useState(false);
+    const isPassword = type === 'password';
+    const inputType = isPassword ? (showPassword ? 'text' : 'password') : type;
+    const isSearch = type === 'search';
+
+    const baseInputClasses = 'w-full rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none transition-all duration-200 shadow-sm';
+    
+    let stateClasses = '';
+    if (isSearch) {
+      stateClasses = 'bg-gray-100 border border-transparent focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-50';
+    } else {
+      stateClasses = error 
+        ? 'bg-white border-2 border-red-500 focus:ring-4 focus:ring-red-50'
+        : isFocused 
+          ? 'bg-white border-2 border-teal-600 focus:ring-4 focus:ring-teal-50'
+          : 'bg-white border border-gray-200 hover:border-gray-300';
+    }
 
     return (
-      <div className="space-y-1.5 w-full">
+      <div className="w-full">
         {label && (
-          <label className="block text-xs font-semibold text-vault-gray-500 uppercase tracking-widest pl-1">
+          <label className={`block text-[11px] font-bold uppercase tracking-wider mb-1.5 transition-colors ${error ? 'text-red-500' : isFocused ? 'text-teal-600' : 'text-gray-500'}`}>
             {label}
           </label>
         )}
         <div className="relative">
-          {icon && (
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-vault-gray-400">
-              {icon}
-            </span>
-          )}
           <input
             ref={ref}
             type={inputType}
-            className={`w-full bg-white border border-vault-gray-300 rounded-lg px-3 py-2 text-sm text-vault-gray-900 placeholder:text-vault-gray-400 focus:outline-none focus:border-vault-primary-500 focus:ring-4 focus:ring-vault-primary-50 transition-all duration-100 ${icon ? 'pl-9' : ''} ${isSensitive ? 'pr-9 font-mono' : ''} ${error ? 'border-red-300 focus:ring-red-50' : ''} ${className}`}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            className={`${baseInputClasses} ${stateClasses} ${isPassword ? 'pr-10' : ''} ${className}`}
             {...props}
           />
-          {isSensitive && (
+          {isPassword && (
             <button
               type="button"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none transition-colors"
               onClick={() => setShowPassword(!showPassword)}
-              tabIndex={-1}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-vault-gray-400 hover:text-vault-gray-600 transition-colors cursor-pointer"
             >
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           )}
         </div>
-        {error && <p className="text-xs text-red-500 font-medium pl-1">{error}</p>}
+        {error && (
+          <p className="text-[11px] font-bold text-red-500 mt-1.5 flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
+            <span className="w-1 h-1 rounded-full bg-red-500" /> {error}
+          </p>
+        )}
+        {helper && !error && (
+          <p className="text-[11px] mt-1.5 text-gray-500 font-medium px-0.5">
+            {helper}
+          </p>
+        )}
       </div>
     );
   }
 );
+
+Input.displayName = 'Input';

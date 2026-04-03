@@ -1,162 +1,133 @@
-import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import {
-  KeyRound, MapPin, CreditCard, FileText, FolderLock,
-  Shield, Plus, Wand2, Star, Clock, ArrowRight,
-} from 'lucide-react';
+import { useMemo } from 'react';
+import { AlertTriangle, Clock, ShieldCheck, FolderLock } from 'lucide-react';
 import { useVault } from '../context/VaultContext';
-import { SecurityRing, getCategoryIcon, getCategoryColor, getCategoryBg } from '../components/vault/VaultHelpers';
-import { VaultItemCard } from '../components/vault/VaultItemCard';
-import { Button } from '../components/ui/Button';
-
-const quickActions = [
-  { icon: KeyRound, label: 'Password', path: '/add/password', color: 'text-vault-primary-600', bg: 'bg-vault-primary-50 border-vault-primary-100' },
-  { icon: MapPin, label: 'Address', path: '/add/address', color: 'text-blue-600', bg: 'bg-blue-50 border-blue-100' },
-  { icon: CreditCard, label: 'Card', path: '/add/card', color: 'text-purple-600', bg: 'bg-purple-50 border-purple-100' },
-  { icon: FileText, label: 'Note', path: '/add/note', color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100' },
-  { icon: FolderLock, label: 'Document', path: '/add/document', color: 'text-orange-600', bg: 'bg-orange-50 border-orange-100' },
-  { icon: Wand2, label: 'Generate', path: '/add/password', color: 'text-pink-600', bg: 'bg-pink-50 border-pink-100' },
-];
+import { SecurityRing, getCategoryIcon } from '../components/vault/VaultHelpers';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { PasswordItem } from '../types/vault';
+import { calculatePasswordStrength, findReusedPasswordsSync, calculateSecurityScore } from '../utils/securityUtils';
 
 export function Dashboard() {
   const { items } = useVault();
-  const navigate = useNavigate();
 
-  const passwordCount = items.filter(i => i.type === 'password').length;
-  const weakPasswords = items.filter(i => i.type === 'password' && (i.strength === 'weak' || i.strength === 'fair')).length;
-  const healthScore = Math.round(((passwordCount - weakPasswords) / Math.max(passwordCount, 1)) * 100);
-  const recentItems = [...items].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 5);
-  const favoriteItems = items.filter(i => i.favorite);
+  const passwords = useMemo(() => items.filter((i): i is PasswordItem => i.type === 'password'), [items]);
+  
+  const weakPasswords = useMemo(() => passwords.filter(i => calculatePasswordStrength(i.password) <= 1), [passwords]);
+  const weakCount = weakPasswords.length;
 
-  const stats = [
-    { label: 'Total items', value: items.length, icon: FolderLock, color: 'text-vault-gray-400' },
-    { label: 'Passwords', value: passwordCount, icon: KeyRound, color: 'text-vault-primary-600' },
-    { label: 'Favorites', value: favoriteItems.length, icon: Star, color: 'text-amber-500' },
-    { label: 'Weak', value: weakPasswords, icon: Shield, color: weakPasswords > 0 ? 'text-red-500' : 'text-emerald-500' },
-  ];
+  const reusedGroups = useMemo(() => findReusedPasswordsSync(items), [items]);
+  const reusedCount = useMemo(() => reusedGroups.reduce((acc, g) => acc + g.items.length, 0), [reusedGroups]);
+
+  const healthScore = useMemo(() => calculateSecurityScore(items, reusedGroups), [items, reusedGroups]);
+
+  const atRiskPasswords = useMemo(() => [...weakPasswords].slice(0, 5), [weakPasswords]);
+  const recentItems = useMemo(() => 
+    [...items]
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 5), 
+    [items]
+  );
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="p-8 space-y-8 max-w-6xl mx-auto overflow-y-auto h-full scrollbar-hidden"
-    >
-      {/* Greeting */}
-      <div className="flex justify-between items-end">
-        <div>
-          <h2 className="text-2xl font-bold text-vault-gray-950 tracking-tight">Vault Overview</h2>
-          <p className="text-sm text-vault-gray-500 mt-1">Manage and monitor your digital security.</p>
-        </div>
-        <div className="flex gap-2">
-           <button onClick={() => navigate('/add')} className="px-4 py-2 bg-vault-primary-600 text-white rounded-lg text-sm font-semibold hover:bg-vault-primary-500 transition-all shadow-sm shadow-vault-primary-200 flex items-center gap-2">
-             <Plus size={16} strokeWidth={2.5}/> New Item
-           </button>
-        </div>
+    <div className="max-w-[1100px] mx-auto px-6 py-8">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-sm text-gray-500 mt-1">Overview of your secure items and vault health</p>
       </div>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {stats.map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className="vault-card p-5 bg-white"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-bold text-vault-gray-400 uppercase tracking-widest">{stat.label}</p>
-              <stat.icon size={16} className={stat.color} />
-            </div>
-            <p className="text-2xl font-bold text-vault-gray-900 leading-none">{stat.value}</p>
-          </motion.div>
-        ))}
-      </div>
+      <div className="flex flex-col gap-8">
+        {/* ROW 1: STAT CARDS */}
+        <div className="grid grid-cols-4 gap-4">
+          <Card variant="stat" className="flex flex-col justify-between">
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Items</span>
+            <span className="text-3xl font-bold text-gray-900 mt-2">{items.length}</span>
+          </Card>
+          <Card variant="stat" className="flex flex-col justify-between">
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Weak Passwords</span>
+            <span className={`text-3xl font-bold mt-2 ${weakCount > 0 ? 'text-red-600' : 'text-gray-900'}`}>{weakCount}</span>
+          </Card>
+          <Card variant="stat" className="flex flex-col justify-between">
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Reused Passwords</span>
+            <span className={`text-3xl font-bold mt-2 ${reusedCount > 0 ? 'text-amber-600' : 'text-gray-900'}`}>{reusedCount}</span>
+          </Card>
+          <Card variant="stat" className="flex flex-col justify-between">
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Security Score</span>
+            <span className="text-3xl font-bold text-teal-600 mt-2">{healthScore}</span>
+          </Card>
+        </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Quick Actions + Security */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Quick actions */}
-          <div>
-            <h3 className="text-[10px] font-bold text-vault-gray-400 uppercase tracking-widest px-1 mb-3">Quick Actions</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {quickActions.map((action, i) => (
-                <motion.button
-                  key={action.label}
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.04 }}
-                  onClick={() => navigate(action.path)}
-                  className="vault-card p-4 bg-white flex flex-col items-center gap-3 cursor-pointer group hover:border-vault-primary-300"
-                >
-                  <div className={`w-12 h-12 rounded-xl border flex items-center justify-center ${action.bg} ${action.color} transition-transform group-hover:scale-110`}>
-                    <action.icon size={22} strokeWidth={1.5} />
+        {/* ROW 2: AT RISK + SCORE */}
+        <div className="grid grid-cols-3 gap-6">
+          <Card variant="section" className="col-span-2">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">At Risk</h3>
+            {atRiskPasswords.length > 0 ? (
+              <div className="divide-y divide-gray-100 -mx-6">
+                {atRiskPasswords.map(item => (
+                  <div key={item.id} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 group">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-red-50 text-red-600">
+                        <AlertTriangle size={16} />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{item.title}</div>
+                        <div className="text-xs text-gray-500">{item.username || item.website || 'No login'}</div>
+                      </div>
+                    </div>
+                    <Badge variant="red">{item.strength}</Badge>
                   </div>
-                  <span className="text-xs font-semibold text-vault-gray-700">{action.label}</span>
-                </motion.button>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 flex flex-col items-center justify-center text-center">
+                <ShieldCheck size={32} className="text-teal-600 mb-3" />
+                <span className="text-sm font-medium text-gray-900">All Good</span>
+                <span className="text-xs text-gray-500">No high-risk passwords found</span>
+              </div>
+            )}
+          </Card>
+
+          <Card variant="section" className="flex flex-col items-center">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6 self-start">Vault Health</h3>
+            <SecurityRing score={healthScore} size={140} strokeWidth={12} />
+            <div className="mt-6 text-center">
+              <div className="text-2xl font-bold text-gray-900">{healthScore}%</div>
+              <div className="text-xs font-medium text-gray-500 mt-1">Overall Score</div>
+            </div>
+          </Card>
+        </div>
+
+        {/* ROW 3: RECENT ACTIVITY */}
+        <Card variant="section">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+          {recentItems.length > 0 ? (
+            <div className="divide-y divide-gray-100 -mx-6">
+              {recentItems.map(item => (
+                <div key={item.id} className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 group">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-gray-100 text-gray-600">
+                      {getCategoryIcon(item.type, 16)}
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">{item.title}</div>
+                      <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                        <Clock size={12} />
+                        {new Date(item.updatedAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                  <Badge variant="gray" className="uppercase">{item.type}</Badge>
+                </div>
               ))}
             </div>
-          </div>
-
-          {/* Recently Added Section would go here in detailed redesign if space allows */}
-        </div>
-
-        {/* Right Column: Health Ring */}
-        <div className="space-y-8">
-           <div>
-            <h3 className="text-[10px] font-bold text-vault-gray-400 uppercase tracking-widest px-1 mb-3">Security Insights</h3>
-            <div className="vault-card p-6 bg-white flex flex-col items-center justify-center text-center">
-              <SecurityRing score={healthScore} size={140} strokeWidth={12} label="Health" />
-              <div className="mt-6 space-y-1">
-                <p className="text-base font-bold text-vault-gray-900">Your vault is {healthScore}% secure</p>
-                <p className="text-xs text-vault-gray-500 px-4">
-                  {healthScore < 70 ? 'Several high-risk passwords detected. Review your audit.' : 'Great work! Your vault security meets premium standards.'}
-                </p>
-              </div>
-              <button
-                onClick={() => navigate('/security')}
-                className="mt-6 w-full py-2.5 rounded-lg border border-vault-gray-200 text-sm font-semibold text-vault-gray-700 hover:bg-vault-gray-50 transition-all flex items-center justify-center gap-2 group"
-              >
-                Full Security Audit <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Items */}
-      <div>
-        <div className="flex items-center justify-between mb-4 px-1">
-          <h3 className="text-[10px] font-bold text-vault-gray-400 uppercase tracking-widest flex items-center gap-2">
-            <Clock size={14} /> Recent Activities
-          </h3>
-          <button
-            onClick={() => navigate('/vault')}
-            className="text-xs font-semibold text-vault-primary-600 hover:text-vault-primary-500 cursor-pointer flex items-center gap-1 transition-colors"
-          >
-            View All <ArrowRight size={12} />
-          </button>
-        </div>
-        <div className="space-y-3">
-          {recentItems.length > 0 ? (
-            recentItems.map((item, i) => (
-              <VaultItemCard key={item.id} item={item} index={i} />
-            ))
           ) : (
-            <div className="vault-card p-12 bg-white flex flex-col items-center justify-center text-center">
-              <div className="w-16 h-16 rounded-full bg-vault-gray-50 flex items-center justify-center mb-4">
-                <FolderLock size={32} className="text-vault-gray-300" />
-              </div>
-              <p className="text-sm font-medium text-vault-gray-900">Your vault is empty</p>
-              <p className="text-xs text-vault-gray-500 mt-1">Start by adding your first credential or secure note.</p>
-              <Button variant="secondary" size="sm" className="mt-6" onClick={() => navigate('/add')}>
-                Add Item
-              </Button>
+            <div className="py-8 flex flex-col items-center justify-center text-center">
+              <FolderLock size={32} className="text-gray-400 mb-3" />
+              <span className="text-sm font-medium text-gray-900">No Activity</span>
+              <span className="text-xs text-gray-500">You haven't added any items yet</span>
             </div>
           )}
-        </div>
+        </Card>
       </div>
-    </motion.div>
+    </div>
   );
 }
