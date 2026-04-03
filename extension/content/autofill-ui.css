@@ -1,0 +1,25 @@
+/**
+ * Autofill UI Styles
+ * Basic styling for the content script elements.
+ */
+
+.my-vault-autofill-dropdown {
+  position: absolute;
+  z-index: 10000;
+  background: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.my-vault-save-prompt {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  z-index: 10000;
+}
