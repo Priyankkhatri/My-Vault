@@ -13,13 +13,8 @@ import { Input } from '../components/ui/Input';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useVault } from '../context/VaultContext';
 import { getQuotas, QuotaInfo } from '../features/ai/quotaTracker';
-import { 
-  changeMasterPasswordAuthPart, 
-  updateSessionAfterPasswordChange, 
-  revokeOtherSessions, 
-  deleteAccountServerSide 
-} from '../services/authService';
-import { reEncryptAllItems } from '../services/vaultService';
+import { supabase } from '../lib/supabase';
+import { api } from '../services/apiClient';
 import { v4 as uuid } from 'uuid';
 
 interface SettingsSectionProps {
@@ -44,7 +39,7 @@ function SettingsSection({ id, title, children, danger }: SettingsSectionProps) 
 
 export function Settings() {
   const navigate = useNavigate();
-  const { addToast, autoLockTimeout, setAutoLockTimeout, items, addItem, clearVault } = useVault();
+  const { addToast, items, addItem, clearVault } = useVault();
   const [activeTab, setActiveTab] = useState('sec-security');
   
   // Danger Zone Modals
@@ -62,7 +57,6 @@ export function Settings() {
   
   // Toggles & Selects
   const [totpEnabled, setTotpEnabled] = useState(false);
-  const autoLockTime = autoLockTimeout <= 0 ? 'never' : String(autoLockTimeout);
   const [aiToggles, setAiToggles] = useState({
     strengthAnalysis: true,
     securityAudit: true,
@@ -156,29 +150,15 @@ export function Settings() {
     setErrors({});
     setIsUpdatingPassword(true);
     try {
-      // 1. Auth update on server + get new session
-      const authRes = await changeMasterPasswordAuthPart(oldPassword, newPassword);
-      if (!authRes.success || !authRes.newSession || !authRes.newParams) {
-        addToast(authRes.error || 'Failed to update password', 'error');
-        return;
-      }
-
-      // 2. Re-encrypt and upload all items
-      const encryptRes = await reEncryptAllItems(items, authRes.newSession.encryptionKey);
-      if (!encryptRes.success) {
-        addToast(encryptRes.error || 'Failed to re-encrypt vault. Please try again.', 'error');
-        return;
-      }
-
-      // 3. Finalize local state
-      updateSessionAfterPasswordChange(authRes.newSession, authRes.newParams);
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
       setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      addToast('Master Password updated successfully!', 'success');
-    } catch (error) {
+      addToast('Password updated successfully!', 'success');
+    } catch (error: any) {
       console.error(error);
-      addToast('An unexpected error occurred', 'error');
+      addToast(error.message || 'An unexpected error occurred', 'error');
     } finally {
       setIsUpdatingPassword(false);
     }
@@ -266,13 +246,7 @@ export function Settings() {
   const handleRevokeAll = async () => {
     setIsRevoking(true);
     try {
-      const success = await revokeOtherSessions();
-      if (success) {
-        setSessions(prev => prev.filter(s => s.id === 'current'));
-        addToast('All other sessions revoked', 'success');
-      } else {
-        addToast('Failed to revoke sessions', 'error');
-      }
+      addToast('Requires Supabase Edge Functions', 'info');
     } finally {
       setIsRevoking(false);
     }
@@ -281,8 +255,10 @@ export function Settings() {
   const handleDeleteAccount = async () => {
     setIsDeletingAccount(true);
     try {
-      const success = await deleteAccountServerSide();
+      // Account deletion through basic API proxy
+      const { success } = await api.delete('/auth/account');
       if (success) {
+        await supabase.auth.signOut();
         addToast('Account deleted successfully', 'success');
         navigate('/');
       } else {
@@ -396,22 +372,6 @@ export function Settings() {
                   <p className="text-xs text-gray-500 mt-1">Require an authenticator app code on login to grant access.</p>
                 </div>
                 <Toggle checked={totpEnabled} onChange={() => setTotpEnabled(!totpEnabled)} />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h4 className="text-sm font-semibold text-gray-900 border-b border-gray-100 pb-2 flex items-center gap-2">
-                <Lock size={16} className="text-gray-400" /> Vault Timeout
-              </h4>
-              <div className="flex flex-col gap-1.5 max-w-xs">
-                <label className="text-xs font-medium text-gray-700">Auto-lock vault after inactivity</label>
-                <select value={autoLockTime} onChange={(e) => setAutoLockTimeout(e.target.value === 'never' ? 0 : parseInt(e.target.value, 10))} 
-                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100 transition-shadow">
-                  <option value="1">1 minute</option>
-                  <option value="5">5 minutes</option>
-                  <option value="15">15 minutes</option>
-                  <option value="never">Never</option>
-                </select>
               </div>
             </div>
 

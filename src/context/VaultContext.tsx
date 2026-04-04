@@ -3,14 +3,12 @@ import toast from 'react-hot-toast';
 import { VaultItem, VaultCategory, VaultState } from '../types/vault';
 
 import { saveVaultItem, updateVaultItem as updateVaultItemServer, deleteVaultItemFromServer, fetchVaultItems } from '../services/vaultService';
-import { login, register, logout as authLogout } from '../services/authService';
+import { useAuth } from './AuthContext';
+import { useMasterPassword } from './MasterPasswordContext';
 
 interface VaultContextType extends VaultState {
-  unlock: (password: string) => Promise<boolean>;
-  lock: () => void;
   setSearchQuery: (query: string) => void;
   setActiveCategory: (category: VaultCategory | 'all') => void;
-  setAutoLockTimeout: (minutes: number) => void;
   addItem: (item: VaultItem) => Promise<void>;
   updateItem: (item: VaultItem) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
@@ -24,14 +22,15 @@ interface VaultContextType extends VaultState {
 const VaultContext = createContext<VaultContextType | undefined>(undefined);
 
 export function VaultProvider({ children }: { children: ReactNode }) {
-  const [isLocked, setIsLocked] = useState(true);
+  const { session } = useAuth();
+  const { encryptionKey, isUnlocked } = useMasterPassword();
   const [items, setItems] = useState<VaultItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<VaultCategory | 'all'>('all');
-  const [autoLockTimeout, setAutoLockTimeout] = useState(15); // default 15 minutes
+  const [isLoading, setIsLoading] = useState(true);
 
-  // 150ms Debounce for search to improve responsiveness of the list filter
+  // Debounce for search
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
@@ -39,14 +38,34 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Development setup: Clear stale salts to ensure the pre-filled password works
+  // Fetch items when session + encryption key are available
   useEffect(() => {
-    if (import.meta.env.DEV) {
-      localStorage.removeItem('vault_salt_demo@vault.local');
-      localStorage.removeItem('vault_iterations_demo@vault.local');
-      console.log('[Dev] Cleared stale vault identity salts');
+    let mounted = true;
+    setIsLoading(true);
+
+    if (session && isUnlocked && encryptionKey) {
+      fetchVaultItems(encryptionKey).then(serverItems => {
+        if (mounted) {
+          setItems(serverItems);
+          setIsLoading(false);
+        }
+      }).catch(err => {
+        if (mounted) {
+          toast.error('Failed to load items from server');
+          console.error('[VaultContext] Fetch error:', err);
+          setIsLoading(false);
+        }
+      });
+    } else if (!session) {
+      setItems([]);
+      setIsLoading(false);
+    } else {
+      // session exists but vault is locked — keep loading
+      setIsLoading(true);
     }
-  }, []);
+
+    return () => { mounted = false; };
+  }, [session, isUnlocked, encryptionKey]);
 
   const addToast = useCallback((message: string, type: 'success' | 'error' | 'warning' | 'info') => {
     switch (type) {
@@ -58,80 +77,72 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const unlock = useCallback(async (password: string) => {
-    try {
-      const email = 'demo@vault.local';
-      
-      console.log('[Auth] Attempting login for', email);
-      let res = await login(email, password);
-      
-      if (!res.success && (res.error?.includes('Account not found') || res.error?.includes('mapping not found'))) {
-        console.log('[Auth] Account not found, attempting auto-registration');
-        res = await register(email, password);
-      }
-      
-      if (!res.success) {
-        console.error('[Auth] Unlock failed:', res.error);
-        return false;
-      }
-      
-      setIsLocked(false);
-      
-      try {
-        const serverItems = await fetchVaultItems();
-        setItems(serverItems);
-      } catch (err) {
-        addToast('Failed to load items from server', 'error');
-        console.error(err);
-      }
-      
-      return true;
-    } catch (err) {
-      console.error(err);
-      return false;
-    }
-  }, [addToast]);
-
-  const lock = useCallback(() => {
-    // Clear encryption key and tokens from memory via authService
-    authLogout();
-    // Reset vault state
-    setIsLocked(true);
-    setSearchQuery('');
-    setItems([]);
-  }, []);
-
   const addItem = useCallback(async (item: VaultItem) => {
-    const res = await saveVaultItem(item);
-    if (!res.success) {
-      addToast('Failed to sync item to server', 'error');
-    } else {
-      setItems(prev => [item, ...prev]);
-      addToast('Item added to vault', 'success');
+    if (!encryptionKey) {
+      addToast('Vault is locked. Please unlock first.', 'error');
+      return;
     }
-  }, [addToast]);
+    const toastId = toast.loading('Syncing... ');
+    try {
+      const res = await saveVaultItem(item, encryptionKey);
+      if (!res.success) {
+        toast.error(res.error || 'Failed to sync item to server', { id: toastId });
+      } else {
+        // Use the Supabase-generated UUID for the local item
+        const now = new Date().toISOString();
+        const savedItem = {
+          ...item,
+          id: res.id || item.id,
+          createdAt: item.createdAt || now,
+          updatedAt: item.updatedAt || now,
+        };
+        setItems(prev => [savedItem, ...prev]);
+        toast.success('Item encrypted and saved', { id: toastId });
+      }
+    } catch (err) {
+      toast.error('An unexpected error occurred while adding item', { id: toastId });
+      console.error('[VaultContext] Add error:', err);
+    }
+  }, [encryptionKey]);
 
   const updateItem = useCallback(async (updated: VaultItem) => {
-    const res = await updateVaultItemServer(updated);
-    if (!res.success) {
-      addToast('Failed to update item on server', 'error');
-    } else {
-      setItems(prev => prev.map(item => item.id === updated.id ? updated : item));
-      addToast('Item updated', 'success');
+    if (!encryptionKey) {
+      addToast('Vault is locked. Please unlock first.', 'error');
+      return;
     }
-  }, [addToast]);
+    const toastId = toast.loading('Syncing... ');
+    try {
+      const res = await updateVaultItemServer(updated, encryptionKey);
+      if (!res.success) {
+        toast.error(res.error || 'Failed to update item on server', { id: toastId });
+      } else {
+        setItems(prev => prev.map(item => item.id === updated.id ? updated : item));
+        toast.success('Item securely updated', { id: toastId });
+      }
+    } catch (err) {
+      toast.error('An unexpected error occurred while updating item', { id: toastId });
+      console.error('[VaultContext] Update error:', err);
+    }
+  }, [encryptionKey]);
 
   const deleteItem = useCallback(async (id: string) => {
-    const res = await deleteVaultItemFromServer(id);
-    if (!res.success) {
-      addToast('Failed to delete item from server', 'error');
-    } else {
-      setItems(prev => prev.filter(item => item.id !== id));
-      addToast('Item deleted', 'success');
+    const toastId = toast.loading('Deleting... ');
+    try {
+      const res = await deleteVaultItemFromServer(id);
+      if (!res.success) {
+        toast.error(res.error || 'Failed to delete item from server', { id: toastId });
+      } else {
+        setItems(prev => prev.filter(item => item.id !== id));
+        toast.success('Item erased from vault', { id: toastId });
+      }
+    } catch (err) {
+      toast.error('An unexpected error occurred while deleting item', { id: toastId });
+      console.error('[VaultContext] Delete error:', err);
     }
-  }, [addToast]);
+  }, []);
 
   const toggleFavorite = useCallback(async (id: string) => {
+    if (!encryptionKey) return;
     const item = items.find(i => i.id === id);
     if (!item) return;
 
@@ -140,14 +151,19 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     // First update locally for immediate UI response
     setItems(prev => prev.map(i => i.id === id ? updated : i));
     
-    // Then sync
-    const res = await updateVaultItemServer(updated);
-    if (!res.success) {
-      // Revert on failure
+    try {
+      const res = await updateVaultItemServer(updated, encryptionKey);
+      if (!res.success) {
+        // Revert on failure
+        setItems(prev => prev.map(i => i.id === id ? item : i));
+        addToast(res.error || 'Failed to update favorite', 'error');
+      }
+    } catch (err) {
       setItems(prev => prev.map(i => i.id === id ? item : i));
-      addToast('Failed to update favorite', 'error');
+      addToast('Connection error: Failed to update favorite', 'error');
+      console.error('[VaultContext] Toggle favorite error:', err);
     }
-  }, [items, addToast]);
+  }, [items, addToast, encryptionKey]);
 
   const clearVault = useCallback(async () => {
     try {
@@ -156,6 +172,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       addToast('All vault data cleared', 'info');
     } catch (err) {
       addToast('Failed to clear some items', 'error');
+      console.error('[VaultContext] Clear vault error:', err);
     }
   }, [items, addToast]);
 
@@ -177,8 +194,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
 
   return (
     <VaultContext.Provider value={{
-      isLocked, items, searchQuery, debouncedSearchQuery, activeCategory, autoLockTimeout,
-      unlock, lock, setSearchQuery, setActiveCategory, setAutoLockTimeout,
+      items, searchQuery, debouncedSearchQuery, activeCategory, isLoading,
+      setSearchQuery, setActiveCategory,
       addItem, updateItem, deleteItem, toggleFavorite,
       addToast, getFilteredItems, clearVault,
     }}>

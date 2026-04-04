@@ -1,90 +1,72 @@
 /**
- * LockScreen.js
- * Renders and manages the lock screen UI state.
+ * LockScreen.js → LoginScreen
+ * Manages the login form UI for Supabase email/password authentication.
  */
 
 (function () {
   "use strict";
 
-  let currentMode = "unlock";
-
   window.LockScreen = {
     /**
-     * Initializes the lock screen with event bindings.
+     * Initializes the login form with event bindings.
      * @param {object} opts
-     * @param {Function} opts.onUnlock - Called with (password, mode).
+     * @param {Function} opts.onSignIn - Called when user clicks Sign In.
      */
     init(opts) {
-      const input = document.getElementById("master-password");
-      const btn = document.getElementById("btn-unlock");
+      const emailInput = document.getElementById("login-email");
+      const passwordInput = document.getElementById("login-password");
+      const btn = document.getElementById("btn-signin");
       const toggle = document.getElementById("btn-toggle-pw");
 
       btn.addEventListener("click", () => {
-        const pw = input.value.trim();
-        if (!pw) {
-          this.showError(currentMode === "setup" ? "Please create a password." : "Please enter your password.");
-          return;
+        if (opts.onSignIn) opts.onSignIn();
+      });
+
+      // Enter key on email moves to password
+      emailInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          passwordInput.focus();
         }
-        if (opts.onUnlock) opts.onUnlock(pw, currentMode);
       });
 
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") btn.click();
+      // Enter key on password triggers sign in
+      passwordInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          btn.click();
+        }
       });
 
+      // Toggle password visibility
       toggle.addEventListener("click", () => {
-        input.type = input.type === "password" ? "text" : "password";
+        passwordInput.type = passwordInput.type === "password" ? "text" : "password";
       });
-    },
 
-    setMode(mode) {
-      currentMode = mode;
-      const title = document.querySelector("#lock-screen h2");
-      const desc = document.querySelector("#lock-screen p");
-      const btn = document.getElementById("btn-unlock");
-      const input = document.getElementById("master-password");
-
-      if (mode === "setup") {
-        title.textContent = "Welcome to My-Vault";
-        desc.textContent = "Create a master password to secure your vault.";
-        btn.textContent = "Set Password";
-        input.placeholder = "New master password";
-      } else {
-        title.textContent = "My-Vault";
-        desc.textContent = "Enter master password to unlock";
-        btn.textContent = "Unlock";
-        input.placeholder = "••••••••";
-      }
+      // Auto-focus email on load
+      setTimeout(() => emailInput.focus(), 50);
     },
 
     show() {
-      document.getElementById("lock-screen").classList.remove("hidden");
+      document.getElementById("login-screen").classList.remove("hidden");
       document.getElementById("vault-view").classList.add("hidden");
       document.getElementById("settings-bar").classList.add("hidden");
-      const input = document.getElementById("master-password");
-      input.value = "";
+      const emailInput = document.getElementById("login-email");
+      const passwordInput = document.getElementById("login-password");
+      emailInput.value = "";
+      passwordInput.value = "";
       this.hideError();
-      setTimeout(() => input.focus(), 50);
+      setTimeout(() => emailInput.focus(), 50);
     },
 
     showError(msg) {
-      const el = document.getElementById("lock-error");
+      const el = document.getElementById("login-error");
       el.textContent = msg;
       el.classList.remove("hidden");
     },
 
     hideError() {
-      document.getElementById("lock-error").classList.add("hidden");
-    },
-
-    setLoading(loading) {
-      const btn = document.getElementById("btn-unlock");
-      btn.disabled = loading;
-      if (loading) {
-        btn.textContent = currentMode === "setup" ? "Initializing…" : "Unlocking…";
-      } else {
-        btn.textContent = currentMode === "setup" ? "Set Password" : "Unlock";
-      }
+      document.getElementById("login-error").classList.add("hidden");
     }
   };
 })();

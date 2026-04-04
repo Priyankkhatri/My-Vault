@@ -11,9 +11,30 @@
      * Shows the loading state.
      */
     showLoading() {
-      document.getElementById("loading-state").classList.remove("hidden");
-      document.getElementById("empty-state").classList.add("hidden");
-      document.getElementById("item-list").classList.add("hidden");
+      const loading = document.getElementById("loading-state");
+      const empty = document.getElementById("empty-state");
+      const list = document.getElementById("item-list");
+
+      loading.classList.remove("hidden");
+      empty.classList.add("hidden");
+      list.innerHTML = this._createSkeletons(4);
+      list.classList.remove("hidden");
+    },
+
+    _createSkeletons(count) {
+      let html = "";
+      for (let i = 0; i < count; i++) {
+        html += `
+          <div class="skeleton-card shimmer">
+            <div class="skeleton-avatar"></div>
+            <div class="skeleton-info">
+              <div class="skeleton-line"></div>
+              <div class="skeleton-line short"></div>
+            </div>
+          </div>
+        `;
+      }
+      return html;
     },
 
     /**

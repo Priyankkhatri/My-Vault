@@ -1,30 +1,38 @@
 /**
  * SettingsBar.js
- * Top bar with lock and dashboard actions.
+ * Top bar with user info, lock, sign out, and dashboard actions.
  */
 
 (function () {
   "use strict";
 
   window.SettingsBar = {
-    /**
-     * Initializes settings bar buttons.
-     * @param {object} opts
-     * @param {Function} opts.onLock
-     * @param {Function} opts.onDashboard
-     */
     init(opts) {
-      document.getElementById("btn-lock").addEventListener("click", () => {
+      document.getElementById("btn-signout").addEventListener("click", function () {
+        if (opts.onSignOut) opts.onSignOut();
+      });
+
+      document.getElementById("btn-lock").addEventListener("click", function () {
         if (opts.onLock) opts.onLock();
       });
 
-      document.getElementById("btn-dashboard").addEventListener("click", () => {
+      document.getElementById("btn-dashboard").addEventListener("click", function () {
         if (opts.onDashboard) opts.onDashboard();
       });
     },
 
-    show() {
-      document.getElementById("settings-bar").classList.remove("hidden");
+    show(user) {
+      var bar = document.getElementById("settings-bar");
+      var emailEl = document.getElementById("user-email");
+
+      if (user && user.email) {
+        emailEl.textContent = user.email;
+        emailEl.title = user.email;
+      } else {
+        emailEl.textContent = "";
+      }
+
+      bar.classList.remove("hidden");
     },
 
     hide() {

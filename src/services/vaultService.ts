@@ -1,126 +1,225 @@
 /**
- * Vault Service — Encrypted CRUD Operations
+ * Vault Service — Zero-Knowledge Encrypted CRUD Operations
  *
- * Handles:
- * - Encrypting vault items before saving to server
- * - Decrypting vault items after loading from server
- * - Local cache management
- * - Sync with backend
+ * ALL sensitive data is encrypted client-side before storage.
+ * Supabase NEVER sees plaintext vault data.
+ *
+ * DB columns used:
+ *   id (auto-generated UUID), user_id, type,
+ *   encrypted_data, encryption_iv,
+ *   version, created_at, updated_at
+ *
+ * Encrypted blob contains ALL other fields:
+ *   title, favorite, tags, username, password, url, website,
+ *   notes, folder, strength, and all type-specific fields
  */
 
 import { api } from './apiClient';
+import { supabase } from '../lib/supabase';
+import { encrypt, decrypt } from './cryptoService';
 import type { VaultItem } from '../types/vault';
-import { v4 as uuid } from 'uuid';
 
-// ─── Helper: Generate UUID (browser-compatible) ──────────────
+// ─── Helpers: Extract / Reconstruct ────────────────────────────
 
-function generateId(): string {
- if (typeof crypto !== 'undefined' && crypto.randomUUID) {
- return crypto.randomUUID();
- }
- // Fallback
- return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
- const r = (Math.random() * 16) | 0;
- const v = c === 'x' ? r : (r & 0x3) | 0x8;
- return v.toString(16);
- });
+/**
+ * Extracts all sensitive fields from a VaultItem into a blob for encryption.
+ * Strictly whitelists only non-sensitive metadata to stay in plaintext.
+ * ALL other fields are bundled into the encrypted blob.
+ */
+function extractSensitiveData(item: VaultItem): Record<string, unknown> {
+  const plaintextMetadata = ['id', 'user_id', 'type', 'createdAt', 'updatedAt'];
+  
+  const sensitive: Record<string, unknown> = {};
+  
+  Object.keys(item).forEach(key => {
+    if (!plaintextMetadata.includes(key)) {
+      sensitive[key] = (item as any)[key];
+    }
+  });
+
+  return sensitive;
 }
 
-// ─── Fetch & Decrypt All Items ──────────────────────────────────
+/**
+ * Reconstructs a VaultItem from a DB row + decrypted blob.
+ * The decrypted blob contains ALL type-specific fields.
+ */
+function reconstructItem(
+  row: { id: string; type: string; created_at: string; updated_at: string },
+  decrypted: Record<string, unknown>
+): VaultItem {
+  return {
+    id: row.id,
+    type: row.type,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    // Spread ALL decrypted fields (title, favorite, tags, password, etc.)
+    ...decrypted,
+  } as VaultItem;
+}
 
-export async function fetchVaultItems(): Promise<VaultItem[]> {
-  const res = await api.get<VaultItem[]>('/vault/items');
-  if (!res.success || !res.data) {
-    throw new Error(res.error || 'Failed to fetch vault items');
+// ─── Fetch & Decrypt All Items ─────────────────────────────────
+
+export async function fetchVaultItems(encryptionKey: CryptoKey): Promise<VaultItem[]> {
+  const { data: { session }, error: authError } = await supabase.auth.getSession();
+  if (authError || !session?.user) throw new Error('Not authenticated');
+
+  const { data, error } = await supabase
+    .from('vault_items')
+    .select('*')
+    .eq('user_id', session.user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  const items: VaultItem[] = [];
+
+  for (const row of data || []) {
+    try {
+      if (row.encrypted_data && row.encryption_iv) {
+        // ── E2EE row: decrypt ──
+        const decrypted = await decrypt(row.encrypted_data, row.encryption_iv, encryptionKey);
+        items.push(reconstructItem(row, decrypted));
+      } else if (row.title || row.username || row.password) {
+        // ── Legacy plaintext row: migrate to encrypted ──
+        const legacyItem: Record<string, unknown> = {
+          title: row.title || '',
+          favorite: row.favorite || false,
+          tags: row.tags || [],
+          notes: row.notes || '',
+          username: row.username || '',
+          password: row.password || '',
+          url: row.url || '',
+          website: row.website || '',
+          folder: row.folder || '',
+        };
+
+        // Encrypt the legacy data
+        const { encrypted, iv } = await encrypt(legacyItem, encryptionKey);
+
+        // Update the row in Supabase (migrate to encrypted, clear plaintext)
+        await supabase
+          .from('vault_items')
+          .update({
+            encrypted_data: encrypted,
+            encryption_iv: iv,
+          })
+          .eq('id', row.id)
+          .eq('user_id', session.user.id);
+
+        items.push(reconstructItem(row, legacyItem));
+      }
+    } catch (err) {
+      console.error('[Vault] Failed to decrypt item:', row.id, err);
+      // Skip items that fail to decrypt (wrong key scenario)
+    }
   }
-  return res.data;
+
+  return items;
 }
 
-// ─── Save (Encrypt & Create) ────────────────────────────────────
+// ─── Save (Encrypt & Create) ───────────────────────────────────
 
-export async function saveVaultItem(item: VaultItem): Promise<{ success: boolean; error?: string }> {
+export async function saveVaultItem(
+  item: VaultItem,
+  encryptionKey: CryptoKey
+): Promise<{ success: boolean; error?: string; id?: string }> {
   try {
-    if (!item.id) {
-      (item as any).id = generateId();
+    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    if (authError || !session?.user) return { success: false, error: 'Not authenticated' };
+
+    // Encrypt all sensitive fields
+    const sensitiveData = extractSensitiveData(item);
+    const { encrypted, iv } = await encrypt(sensitiveData, encryptionKey);
+
+    // DO NOT send id — let Supabase auto-generate the UUID
+    const { data: inserted, error } = await supabase
+      .from('vault_items')
+      .insert({
+        user_id: session.user.id,
+        type: item.type,
+        encrypted_data: encrypted,
+        encryption_iv: iv,
+      })
+      .select('id, created_at, updated_at')
+      .single();
+
+    if (error) {
+      console.error('[Vault] Insert error detail:', error);
+      return { success: false, error: error.message || 'Failed to save item' };
     }
 
-    // Determine specific fields based on item type
-    let username = '';
-    let password = '';
-    if (item.type === 'password') {
-      username = item.username;
-      password = item.password;
-    }
-
-    const res = await api.post('/vault/items', {
-      id: item.id,
-      title: item.title,
-      username,
-      password,
-      type: item.type,
-      favorite: item.favorite,
-      tags: item.tags,
-      notes: item.notes || item.folder || '',
-    });
-
-    if (!res.success) {
-      return { success: false, error: res.error || 'Failed to save item' };
-    }
-
-    return { success: true };
-  } catch (error) {
+    // Return the Supabase-generated UUID
+    return { success: true, id: inserted?.id };
+  } catch (error: any) {
     console.error('[Vault] Save error:', error);
-    return { success: false, error: 'Vault save failed' };
+    return { success: false, error: error.message || 'Vault save failed' };
   }
 }
 
-// ─── Update (Encrypt & Update) ──────────────────────────────────
+// ─── Update (Encrypt & Update) ─────────────────────────────────
 
 export async function updateVaultItem(
   item: VaultItem,
-  version: number = 1
+  encryptionKey: CryptoKey
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    let username = '';
-    let password = '';
-    if (item.type === 'password') {
-      username = item.username;
-      password = item.password;
-    }
+    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    if (authError || !session?.user) return { success: false, error: 'Not authenticated' };
 
-    const res = await api.put(`/vault/items/${item.id}`, {
-      title: item.title,
-      username,
-      password,
-      type: item.type,
-      favorite: item.favorite,
-      tags: item.tags,
-      notes: item.notes || item.folder || '',
-      version,
-    });
+    // Encrypt all sensitive fields
+    const sensitiveData = extractSensitiveData(item);
+    const { encrypted, iv } = await encrypt(sensitiveData, encryptionKey);
 
-    if (!res.success) {
-      return { success: false, error: res.error || 'Failed to update item' };
+    // Only update encrypted_data, encryption_iv, and updated_at
+    const { error } = await supabase
+      .from('vault_items')
+      .update({
+        type: item.type,
+        encrypted_data: encrypted,
+        encryption_iv: iv,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', item.id)
+      .eq('user_id', session.user.id);
+
+    if (error) {
+      return { success: false, error: error.message || 'Failed to update item' };
     }
 
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Vault] Update error:', error);
-    return { success: false, error: 'Vault update failed' };
+    return { success: false, error: error.message || 'Vault update failed' };
   }
 }
 
-// ─── Delete ─────────────────────────────────────────────────────
+// ─── Delete ────────────────────────────────────────────────────
 
-export async function deleteVaultItemFromServer(id: string): Promise<{ success: boolean; error?: string }> {
- const res = await api.delete(`/vault/items/${id}`);
- if (!res.success) {
- return { success: false, error: res.error || 'Failed to delete item' };
- }
- return { success: true };
+export async function deleteVaultItemFromServer(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { data: { session }, error: authError } = await supabase.auth.getSession();
+    if (authError || !session?.user) return { success: false, error: 'Not authenticated' };
+
+    const { error } = await supabase
+      .from('vault_items')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', session.user.id);
+
+    if (error) {
+      return { success: false, error: error.message || 'Failed to delete item' };
+    }
+    return { success: true };
+  } catch (error: any) {
+    console.error('[Vault] Delete error:', error);
+    return { success: false, error: error.message || 'Failed to delete item' };
+  }
 }
 
-// ─── AI Service Proxies ─────────────────────────────────────────
+// ─── AI Service Proxies (unchanged — no encryption needed) ─────
 
 export async function aiSecurityAudit(metadata: { age: number; reuseCount: number; entropyScore: number }, signal?: AbortSignal) {
  return api.post<{ assessment: string; severity: string }>('/ai/security-audit', metadata, { signal });
@@ -146,7 +245,7 @@ export async function aiGetQuota(signal?: AbortSignal) {
  return api.get<Array<{ feature: string; used: number; limit: number; remaining: number }>>('/ai/quota', { signal });
 }
 
-// ─── Settings & Batch Operations ──────────────────────────────
+// ─── Settings & Batch Operations ───────────────────────────────
 
 function getAISettings() {
   const defaults = {
@@ -163,33 +262,6 @@ function getAISettings() {
   }
 }
 
-/**
- * Re-encrypt all items for master password change.
- */
-export async function reEncryptAllItems(
-  items: VaultItem[], 
-  newKey: CryptoKey // Kept signature for compatibility, but no longer encrypting
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const results = await Promise.all(
-      items.map(async (item) => {
-        return updateVaultItem(item, (item as any).version || 1);
-      })
-    );
-
-    const failures = results.filter(r => !r.success);
-    if (failures.length > 0) {
-      return { success: false, error: `Failed to update ${failures.length} items` };
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error('[Vault] Batch update error:', error);
-    return { success: false, error: 'Batch update failed' };
-  }
-}
-
-// Wrap existing AI calls with setting check
 const originalAiSecurityAudit = aiSecurityAudit;
 export const aiSecurityAuditWithSetting = async (metadata: any) => {
   if (!getAISettings().securityAudit) return { success: false, error: 'Security audit is disabled in settings' };

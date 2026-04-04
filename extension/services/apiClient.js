@@ -5,7 +5,7 @@
 
 var apiClient = {
   async get(url) {
-    console.log(`[apiClient] GET ${url}`);
+
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({
@@ -17,7 +17,7 @@ var apiClient = {
   },
 
   async post(url, body) {
-    console.log(`[apiClient] POST ${url}`, body);
+
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({

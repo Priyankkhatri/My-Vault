@@ -1,6 +1,7 @@
 /**
  * ItemCard.js
  * Creates a single vault item card DOM element.
+ * Includes copy username, copy password, and autofill actions.
  */
 
 (function () {
@@ -18,6 +19,7 @@
    * @param {object} opts
    * @param {Function} opts.onCopyUsername
    * @param {Function} opts.onCopyPassword
+   * @param {Function} opts.onAutofill
    * @returns {HTMLElement}
    */
   window.ItemCard = {
@@ -35,6 +37,9 @@
           <div class="item-username">${escapeHtml(item.username || "")}</div>
         </div>
         <div class="item-actions">
+          <button class="action-btn autofill-btn" data-action="autofill" title="Autofill on page">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          </button>
           <button class="action-btn" data-action="copy-user" title="Copy username">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </button>
@@ -44,14 +49,27 @@
         </div>
       `;
 
+      // Autofill button
+      card.querySelector('[data-action="autofill"]').addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (opts.onAutofill) opts.onAutofill(item);
+      });
+
+      // Copy username
       card.querySelector('[data-action="copy-user"]').addEventListener("click", (e) => {
         e.stopPropagation();
         if (opts.onCopyUsername) opts.onCopyUsername(item.username || "");
       });
 
+      // Copy password
       card.querySelector('[data-action="copy-pass"]').addEventListener("click", (e) => {
         e.stopPropagation();
         if (opts.onCopyPassword) opts.onCopyPassword(item.password || "");
+      });
+
+      // Click on the card itself also triggers autofill
+      card.addEventListener("click", () => {
+        if (opts.onAutofill) opts.onAutofill(item);
       });
 
       return card;

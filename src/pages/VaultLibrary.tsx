@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Folder, KeyRound, MapPin, CreditCard, FileText, FolderLock, Plus, SlidersHorizontal
+  Folder, KeyRound, MapPin, CreditCard, FileText, FolderLock, Plus, SlidersHorizontal, Loader2
 } from 'lucide-react';
 import { useVault } from '../context/VaultContext';
 import { VaultItemCard } from '../components/vault/VaultItemCard';
@@ -28,7 +28,8 @@ export function VaultLibrary() {
     setSearchQuery, 
     debouncedSearchQuery,
     activeCategory, 
-    setActiveCategory 
+    setActiveCategory,
+    isLoading
   } = useVault();
   
   const [localSearch, setLocalSearch] = useState(searchQuery);
@@ -163,11 +164,15 @@ export function VaultLibrary() {
 
         {/* VAULT LIST */}
         <div className="flex-1 overflow-y-auto">
-          {filteredItems.length === 0 ? (
+          {isLoading ? (
+            <div className="p-8 h-full flex flex-col items-center justify-center text-gray-500">
+              <Loader2 className="animate-spin w-8 h-8 text-teal-600" />
+            </div>
+          ) : filteredItems.length === 0 ? (
             <div className="p-8 h-full flex items-center justify-center">
               <EmptyState
                 icon={FolderLock}
-                title="No items found"
+                title={searchQuery ? "No items found" : "No saved passwords yet"}
                 description={searchQuery 
                   ? 'No results matched your search. Try adjusting the keywords.' 
                   : 'This category is empty. Store a new encrypted entry.'

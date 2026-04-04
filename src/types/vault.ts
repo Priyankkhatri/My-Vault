@@ -60,11 +60,10 @@ export interface DocumentItem extends VaultItemBase {
 export type VaultItem = PasswordItem | AddressItem | CardItem | NoteItem | DocumentItem;
 
 export interface VaultState {
-  isLocked: boolean;
   items: VaultItem[];
   searchQuery: string;
   activeCategory: VaultCategory | 'all';
-  autoLockTimeout: number; // minutes, 0 = never
+  isLoading: boolean;
 }
 
 export interface SecurityAuditResult {

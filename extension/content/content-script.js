@@ -1,13 +1,14 @@
 /**
  * content-script.js
  * Entry point for all content-script modules.
- * Orchestrates form detection, autofill dropdown, and save prompts.
+ * Orchestrates form detection, autofill dropdown, save prompts,
+ * and listens for AUTOFILL_CREDENTIALS messages from the background.
  */
 
 (function () {
   "use strict";
 
-  console.log("[My-Vault] Content script loaded.");
+
 
   /** Tracks forms we've already processed so we don't double-bind. */
   const processedForms = new WeakSet();
@@ -38,9 +39,31 @@
       // Attach save-on-submit listener
       window.MyVaultSavePrompt.attachSubmitListener(formDescriptor);
 
-      console.log("[My-Vault] Autofill bound to a login form.");
+
     }
   }
+
+  // --- Listen for AUTOFILL_CREDENTIALS from popup → background → here ---
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message && message.type === "AUTOFILL_CREDENTIALS" && message.credentials) {
+
+
+      const credentials = message.credentials;
+      const detectedForms = window.MyVaultFormDetector.detectForms();
+
+      if (detectedForms.length > 0) {
+        // Fill the first detected form
+        window.MyVaultAutofill.fill(credentials, detectedForms[0]);
+
+        sendResponse({ success: true });
+      } else {
+        console.warn("[My-Vault] No login forms detected on this page.");
+        sendResponse({ success: false, error: "No login forms found" });
+      }
+
+      return true; // async response
+    }
+  });
 
   // --- Initial scan (after a short delay to let SPAs render) ---
   if (document.readyState === "loading") {

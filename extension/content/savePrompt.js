@@ -91,7 +91,7 @@
           return;
         }
         if (response && response.success) {
-          console.log("[My-Vault] Credentials saved successfully.");
+
         } else {
           console.warn("[My-Vault] Save failed:", response?.error);
         }

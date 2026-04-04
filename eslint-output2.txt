@@ -1,0 +1,11 @@
+
+> my-vault@0.0.0 lint
+> eslint .
+
+
+C:\Users\priya\Desktop\My-Vault\public\background.js
+  4:1  error  'chrome' is not defined  no-undef
+  8:1  error  'chrome' is not defined  no-undef
+
+✖ 2 problems (2 errors, 0 warnings)
+

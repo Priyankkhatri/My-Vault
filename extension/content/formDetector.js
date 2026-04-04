@@ -101,7 +101,7 @@
       });
     }
 
-    console.log(`[My-Vault] Detected ${results.length} login form(s).`);
+
     return results;
   }
 

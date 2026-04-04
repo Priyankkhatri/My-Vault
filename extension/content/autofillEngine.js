@@ -48,12 +48,12 @@
 
     if (usernameField && credentials.username) {
       setNativeValue(usernameField, credentials.username);
-      console.log("[My-Vault] Username filled.");
+
     }
 
     if (passwordField && credentials.password) {
       setNativeValue(passwordField, credentials.password);
-      console.log("[My-Vault] Password filled.");
+
     }
   }
 

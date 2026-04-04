@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Lock, ShieldCheck, Settings } from 'lucide-react';
-import { useVault } from '../../context/VaultContext';
+import { LayoutDashboard, Lock, ShieldCheck, Settings, LogOut } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -10,12 +10,12 @@ const navItems = [
 ];
 
 export function Sidebar() {
-  const { lock } = useVault();
+  const { signOut } = useAuth();
   const navigate = useNavigate();
 
-  const handleLock = () => {
-    lock(); // clears encryption key, tokens, and vault state
-    navigate('/', { replace: true }); // redirect to root (LockScreen renders when isLocked=true)
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/login', { replace: true });
   };
 
   return (
@@ -46,11 +46,11 @@ export function Sidebar() {
 
       <div className="p-4 border-t border-gray-100">
         <button
-          onClick={handleLock}
-          className="flex w-full items-center gap-3 px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 max-w-full"
+          onClick={handleLogout}
+          className="flex w-full items-center gap-3 px-3 py-2 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 max-w-full group"
         >
-          <Lock size={18} />
-          Lock Vault
+          <LogOut size={18} className="group-hover:text-red-500 transition-colors" />
+          <span className="group-hover:text-red-600 transition-colors">Log Out</span>
         </button>
       </div>
     </aside>

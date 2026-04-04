@@ -3,75 +3,13 @@
  *
  * Handles:
  * - Base URL configuration
- * - JWT token management (auto-attach, auto-refresh)
+ * - JWT token management (auto-attaches Supabase session token)
  * - Standardized error handling
  */
 
+import { supabase } from '../lib/supabase';
+
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-
-let accessToken: string | null = null;
-let refreshToken: string | null = null;
-let refreshPromise: Promise<boolean> | null = null;
-
-// ─── Token Management ───────────────────────────────────────────
-
-export function setTokens(access: string, refresh: string) {
- accessToken = access;
- refreshToken = refresh;
- localStorage.setItem('vault_refresh_token', refresh);
-}
-
-export function clearTokens() {
- accessToken = null;
- refreshToken = null;
- localStorage.removeItem('vault_refresh_token');
-}
-
-export function getAccessToken() {
- return accessToken;
-}
-
-export function loadStoredRefreshToken() {
- refreshToken = localStorage.getItem('vault_refresh_token');
- return refreshToken;
-}
-
-async function refreshAccessToken(): Promise<boolean> {
- if (!refreshToken) return false;
-
- // Deduplicate concurrent refresh calls
- if (refreshPromise) return refreshPromise;
-
- refreshPromise = (async () => {
- try {
- const res = await fetch(`${API_BASE}/auth/refresh`, {
- method: 'POST',
- headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({ refreshToken }),
- });
-
- if (!res.ok) {
- clearTokens();
- return false;
- }
-
- const data = await res.json();
- if (data.success) {
- accessToken = data.data.accessToken;
- refreshToken = data.data.refreshToken;
- localStorage.setItem('vault_refresh_token', data.data.refreshToken);
- return true;
- }
- return false;
- } catch {
- return false;
- } finally {
- refreshPromise = null;
- }
- })();
-
- return refreshPromise;
-}
 
 // ─── HTTP Methods ───────────────────────────────────────────────
 
@@ -91,8 +29,12 @@ async function request<T>(
     'Content-Type': 'application/json',
   };
 
-  if (!options?.skipAuth && accessToken) {
-    headers['Authorization'] = `Bearer ${accessToken}`;
+  if (!options?.skipAuth) {
+    // Get fresh Supabase access token
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
   }
 
   let res: Response;
@@ -105,30 +47,16 @@ async function request<T>(
     });
   } catch (err: any) {
     if (err.name === 'AbortError') {
-      console.log(`[API] Request aborted: ${method} ${path}`);
+
     }
     return { success: false, error: err.message || 'Network error' };
   }
 
-  // Auto-refresh on 401
-  if (res.status === 401 && !options?.skipAuth && refreshToken) {
-    const refreshed = await refreshAccessToken();
-    if (refreshed) {
-      headers['Authorization'] = `Bearer ${accessToken}`;
-      try {
-        res = await fetch(url, {
-          method,
-          headers,
-          body: body ? JSON.stringify(body) : undefined,
-          signal: options?.signal,
-        });
-      } catch (err: any) {
-        return { success: false, error: err.message || 'Network error' };
-      }
-    } else {
-      clearTokens();
-      return { success: false, error: 'Session expired. Please log in again.', status: 401 };
-    }
+  // Supabase SDK automatically handles token refresh in the background.
+  // If we receive a 401 from our backend here, we assume the token is completely invalid.
+  if (res.status === 401 && !options?.skipAuth) {
+    await supabase.auth.signOut();
+    return { success: false, error: 'Session expired. Please log in again.', status: 401 };
   }
 
   try {
