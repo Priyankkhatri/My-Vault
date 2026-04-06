@@ -120,13 +120,17 @@
   function attachSubmitListener(formDescriptor) {
     const { usernameField, passwordField, form } = formDescriptor;
 
+    let debounceTimer;
     const handler = (e) => {
-      const username = usernameField ? usernameField.value : "";
-      const password = passwordField ? passwordField.value : "";
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        const username = usernameField ? usernameField.value : "";
+        const password = passwordField ? passwordField.value : "";
 
-      if (password) {
-        showPrompt({ username, password });
-      }
+        if (password) {
+          showPrompt({ username, password });
+        }
+      }, 50);
     };
 
     if (form) {

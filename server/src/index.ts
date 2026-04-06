@@ -18,6 +18,7 @@ import authRoutes from './routes/auth.routes.js';
 import vaultRoutes from './routes/vault.routes.js';
 import aiRoutes from './routes/ai.routes.js';
 import deviceRoutes from './routes/device.routes.js';
+import paymentRoutes from './routes/payment.routes.js';
 import { authMiddleware } from './middleware/auth.js';
 
 const app = express();
@@ -29,10 +30,17 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: env.corsOrigin,
+  origin: (origin, callback) => {
+    // In dev, allow any localhost origin
+    if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-razorpay-signature'],
 }));
 
 app.use(express.json({ limit: '5mb' }));
@@ -59,6 +67,7 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/vault', apiLimiter, vaultRoutes);
 app.use('/api/ai', apiLimiter, aiRoutes);
 app.use('/api/devices', apiLimiter, deviceRoutes);
+app.use('/api/payments', apiLimiter, paymentRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

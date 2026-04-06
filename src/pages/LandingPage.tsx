@@ -74,7 +74,7 @@ const HOW_IT_WORKS = [
 const FAQS = [
   {
     q: 'Is Vestiga really free?',
-    a: 'Yes! Vestiga is completely free to use with all core features including the browser extension, cross-device sync, and AI security audits. We believe everyone deserves strong password security.',
+    a: 'Vestiga offers a generous Free tier which includes the core extension and up to 16 passwords. For power users, Vestiga Pro unlocks unlimited passwords, cross-device sync, and AI security audits for just $3/month.',
   },
   {
     q: 'Can Vestiga see my passwords?',
@@ -134,6 +134,7 @@ function Navbar() {
     { label: 'Features', href: '#features' },
     { label: 'Security', href: '#security' },
     { label: 'How It Works', href: '#how-it-works' },
+    { label: 'Pricing', href: '#pricing' },
     { label: 'FAQ', href: '#faq' },
   ];
 
@@ -307,7 +308,7 @@ function HeroSection() {
           className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-teal-200 bg-teal-50 mb-8"
         >
           <span className="w-2 h-2 bg-teal-500 rounded-full animate-pulse" />
-          <span className="text-xs font-bold text-teal-700 uppercase tracking-wider">Open Source & Free Forever</span>
+          <span className="text-xs font-bold text-teal-700 uppercase tracking-wider">Join 10,000+ Secure Users</span>
         </motion.div>
 
         {/* Headline */}
@@ -636,6 +637,172 @@ function HowItWorks() {
   );
 }
 
+function PricingSection() {
+  const { user, tier, session, refreshProfile } = useAuth();
+  const navigate = useNavigate();
+
+  const handleUpgrade = async () => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${baseUrl}/payments/create-subscription`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`
+        }
+      });
+      const result = await response.json();
+
+      if (result.alreadyPro) {
+        alert('You are already a Pro member!');
+        return;
+      }
+
+      const options = {
+        key: result.data.keyId,
+        subscription_id: result.data.subscriptionId,
+        name: 'Vestiga Pro',
+        description: 'Monthly Subscription',
+        handler: async function (response: any) {
+          console.log('[Razorpay] Payment Success:', response);
+          await refreshProfile();
+          alert('Welcome to Vestiga Pro! Your account has been upgraded.');
+          navigate('/dashboard');
+        },
+        prefill: {
+          email: user?.email,
+        },
+        theme: {
+          color: '#0d9488',
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      console.error('[Pricing] Upgrade error:', err);
+      alert('Failed to start checkout. Please try again.');
+    }
+  };
+
+  const handleAction = (planName: string) => {
+    if (!user) {
+      navigate('/signup');
+      return;
+    }
+    
+    if (planName === 'Pro') {
+      if (tier === 'pro') {
+        navigate('/dashboard');
+      } else {
+        handleUpgrade();
+      }
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
+  return (
+    <section id="pricing" className="py-24 bg-white relative overflow-hidden">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="text-center max-w-2xl mx-auto mb-16">
+          <motion.h2 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4"
+          >
+            Simple, Transparent Pricing
+          </motion.h2>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="text-lg text-gray-600"
+          >
+            Start securing your digital life for free, or upgrade to Pro for absolute power. No hidden fees.
+          </motion.p>
+        </div>
+
+        <div className="flex flex-col md:flex-row justify-center items-stretch gap-8 max-w-5xl mx-auto animate-in fade-in duration-500">
+          
+          {/* Free Tier */}
+          <div className="flex-1 bg-white border border-gray-200 rounded-3xl p-8 shadow-sm flex flex-col hover:border-teal-200 transition-colors">
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Basic</h3>
+            <p className="text-gray-500 text-sm mb-6">Perfect for individuals just getting started with security.</p>
+            <div className="text-4xl font-black text-gray-900 mb-6">$0<span className="text-lg font-medium text-gray-500">/mo</span></div>
+            <ul className="space-y-4 mb-8 flex-1">
+              <li className="flex items-center gap-3 text-sm text-gray-700 font-medium">
+                <CheckCircle2 size={18} className="text-teal-500 shrink-0" />
+                Up to 16 Passwords
+              </li>
+              <li className="flex items-center gap-3 text-sm text-gray-700 font-medium">
+                <CheckCircle2 size={18} className="text-teal-500 shrink-0" />
+                Browser Extension Autofill
+              </li>
+              <li className="flex items-center gap-3 text-sm text-gray-700 font-medium">
+                <CheckCircle2 size={18} className="text-teal-500 shrink-0" />
+                Zero-Knowledge Encryption
+              </li>
+              <li className="flex items-center gap-3 text-sm text-gray-400">
+                <X size={18} className="text-gray-300 shrink-0" />
+                Cross-Device Sync
+              </li>
+              <li className="flex items-center gap-3 text-sm text-gray-400">
+                <X size={18} className="text-gray-300 shrink-0" />
+                AI Security Audits
+              </li>
+            </ul>
+            <Link to="/signup" className="block w-full text-center py-3 px-6 rounded-xl font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors">
+              Get Started Free
+            </Link>
+          </div>
+
+          {/* Pro Tier */}
+          <div className="flex-1 bg-white border-2 border-teal-500 rounded-3xl p-8 shadow-xl shadow-teal-900/5 flex flex-col relative transform md:-translate-y-4">
+            <div className="absolute -top-4 inset-x-0 flex justify-center">
+              <span className="bg-teal-500 text-white text-xs font-bold uppercase tracking-wider py-1 px-3 rounded-full">Most Popular</span>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Vestiga Pro</h3>
+            <p className="text-gray-500 text-sm mb-6">For power users who need complete security across all devices.</p>
+            <div className="text-4xl font-black text-gray-900 mb-6">$3<span className="text-lg font-medium text-gray-500">/mo</span></div>
+            <ul className="space-y-4 mb-8 flex-1">
+              <li className="flex items-center gap-3 text-sm text-gray-900 font-semibold">
+                <CheckCircle2 size={18} className="text-teal-500 shrink-0" />
+                Unlimited Passwords
+              </li>
+              <li className="flex items-center gap-3 text-sm text-gray-900 font-semibold">
+                <CheckCircle2 size={18} className="text-teal-500 shrink-0" />
+                Browser Extension Autofill
+              </li>
+              <li className="flex items-center gap-3 text-sm text-gray-900 font-semibold">
+                <CheckCircle2 size={18} className="text-teal-500 shrink-0" />
+                Zero-Knowledge Encryption
+              </li>
+              <li className="flex items-center gap-3 text-sm text-gray-900 font-semibold">
+                <CheckCircle2 size={18} className="text-teal-500 shrink-0" />
+                Cross-Device Sync
+              </li>
+              <li className="flex items-center gap-3 text-sm text-gray-900 font-semibold">
+                <CheckCircle2 size={18} className="text-teal-500 shrink-0" />
+                Advanced AI Security Audits
+              </li>
+              <li className="flex items-center gap-3 text-sm text-gray-900 font-semibold">
+                <CheckCircle2 size={18} className="text-teal-500 shrink-0" />
+                Priority Support
+              </li>
+            </ul>
+            <Link to="/signup" className="block w-full text-center py-3 px-6 rounded-xl font-semibold text-white bg-teal-600 hover:bg-teal-700 shadow-md shadow-teal-600/20 active:scale-[0.98] transition-all">
+              Upgrade to Pro
+            </Link>
+          </div>
+
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
@@ -829,6 +996,7 @@ export function LandingPage() {
       <FeaturesSection />
       <SecuritySection />
       <HowItWorks />
+      <PricingSection />
       <FAQSection />
       <CTASection />
       <Footer />

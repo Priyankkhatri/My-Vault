@@ -9,6 +9,9 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  tier: 'free' | 'pro';
+  itemCount: number;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -16,12 +19,37 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   signOut: async () => {},
+  tier: 'free',
+  itemCount: 0,
+  refreshProfile: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tier, setTier] = useState<'free' | 'pro'>('free');
+  const [itemCount, setItemCount] = useState(0);
+
+  const refreshProfile = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/auth/profile`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+      const result = await response.json();
+      if (result.success) {
+        setTier(result.data.tier);
+        setItemCount(result.data.itemCount);
+      }
+    } catch (err) {
+      console.error('[Auth] Profile refresh error:', err);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -46,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        if (session) refreshProfile();
       }
     });
 
@@ -64,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, signOut }}>
+    <AuthContext.Provider value={{ session, user, loading, signOut, tier, itemCount, refreshProfile }}>
       <AnimatePresence mode="wait">
         {loading ? (
           <motion.div 

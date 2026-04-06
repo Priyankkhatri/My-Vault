@@ -26,15 +26,62 @@
       if (processedForms.has(passwordField)) continue;
       processedForms.add(passwordField);
 
-      // Show dropdown on focus for both fields
-      const showDropdown = (inputEl) => {
-        inputEl.addEventListener("focus", () => {
+      // Inject inline icon into the specified field
+      const injectIcon = (inputEl) => {
+        if (!inputEl || inputEl.dataset.vestigaIconAttached) return;
+        inputEl.dataset.vestigaIconAttached = "true";
+
+        const iconContainer = document.createElement('div');
+        iconContainer.style.position = 'fixed';
+        iconContainer.style.cursor = 'pointer';
+        iconContainer.style.zIndex = '2147483646';
+        iconContainer.style.width = '18px';
+        iconContainer.style.height = '18px';
+        // Ensure chrome.runtime.getURL can resolve the icon
+        iconContainer.style.backgroundImage = `url(${chrome.runtime.getURL('assets/icon32.png')})`;
+        iconContainer.style.backgroundSize = 'contain';
+        iconContainer.style.backgroundRepeat = 'no-repeat';
+        iconContainer.style.backgroundPosition = 'center';
+        iconContainer.style.opacity = '0.7';
+        iconContainer.style.transition = 'opacity 0.2s';
+        
+        iconContainer.addEventListener('mouseenter', () => iconContainer.style.opacity = '1');
+        iconContainer.addEventListener('mouseleave', () => iconContainer.style.opacity = '0.7');
+
+        const updatePosition = () => {
+          const rect = inputEl.getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0 || window.getComputedStyle(inputEl).visibility === 'hidden') {
+            iconContainer.style.display = 'none';
+          } else {
+            iconContainer.style.display = 'block';
+            iconContainer.style.top = `${rect.top + (rect.height - 18) / 2}px`;
+            iconContainer.style.left = `${rect.right - 28}px`; // 10px padding from right
+          }
+        };
+
+        updatePosition();
+        window.addEventListener('scroll', updatePosition, true);
+        window.addEventListener('resize', updatePosition, true);
+
+        document.body.appendChild(iconContainer);
+
+        iconContainer.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
           window.MyVaultDropdown.show(inputEl, formDescriptor);
         });
+
+        const io = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            iconContainer.style.opacity = entry.isIntersecting ? '0.7' : '0';
+            iconContainer.style.pointerEvents = entry.isIntersecting ? 'auto' : 'none';
+          });
+        });
+        io.observe(inputEl);
       };
 
-      if (usernameField) showDropdown(usernameField);
-      showDropdown(passwordField);
+      if (usernameField) injectIcon(usernameField);
+      injectIcon(passwordField);
 
       // Attach save-on-submit listener
       window.MyVaultSavePrompt.attachSubmitListener(formDescriptor);

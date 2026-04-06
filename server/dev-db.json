@@ -27,6 +27,21 @@
         "created_at": "2026-04-02T04:17:36.375Z",
         "updated_at": "2026-04-02T04:17:36.375Z"
       }
+    ],
+    [
+      "f4180674-c131-4ea0-be06-4ae648721c9a",
+      {
+        "id": "f4180674-c131-4ea0-be06-4ae648721c9a",
+        "email": "priyank.khatri.cg@gmail.com",
+        "auth_hash": "supabase_managed",
+        "kdf_salt": "not_applicable",
+        "kdf_params": {
+          "iterations": 0
+        },
+        "created_at": "2026-04-06T18:26:38.401Z",
+        "updated_at": "2026-04-06T18:26:38.401Z",
+        "tier": "free"
+      }
     ]
   ],
   "vaultItems": [],

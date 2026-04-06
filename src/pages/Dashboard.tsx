@@ -5,10 +5,45 @@ import { getCategoryIcon } from '../components/vault/VaultHelpers';
 import { Badge } from '../components/ui/Badge';
 import { PasswordItem } from '../types/vault';
 import { calculatePasswordStrength, findReusedPasswordsSync, calculateSecurityScore } from '../utils/securityUtils';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { motion } from 'framer-motion';
 
 export function Dashboard() {
   const { items } = useVault();
+  const { tier, itemCount, refreshProfile, session } = useAuth();
+  const navigate = useNavigate();
+
+  const handleUpgrade = async () => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${baseUrl}/payments/create-subscription`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`
+        }
+      });
+      const result = await response.json();
+
+      const options = {
+        key: result.data.keyId,
+        subscription_id: result.data.subscriptionId,
+        name: 'Vestiga Pro',
+        description: 'Monthly Subscription',
+        handler: async function (response: any) {
+          await refreshProfile();
+          alert('Welcome to Vestiga Pro! Your account has been upgraded.');
+        },
+        theme: { color: '#0d9488' },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      console.error('[Dashboard] Upgrade error:', err);
+      alert('Failed to start checkout. Please try again.');
+    }
+  };
 
   const passwords = useMemo(() => items.filter((i): i is PasswordItem => i.type === 'password'), [items]);
   
@@ -32,12 +67,50 @@ export function Dashboard() {
     <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 animate-in fade-in duration-300">
       
       {/* Header */}
-      <div className="flex items-end justify-between mb-8">
+      <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Overview</h1>
           <p className="text-sm text-gray-500 mt-1 font-medium">Your vault health and security status</p>
         </div>
+        {tier === 'pro' && (
+          <Badge variant="teal" className="flex items-center gap-1.5 py-1 px-3">
+            <ShieldCheck size={12} />
+            PRO ACTIVE
+          </Badge>
+        )}
       </div>
+
+      {/* Pro Upgrade Banner */}
+      {tier === 'free' && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 relative overflow-hidden bg-gradient-to-r from-teal-600 to-cyan-600 rounded-2xl p-6 text-white shadow-lg shadow-teal-900/10 group"
+        >
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl transform translate-x-20 -translate-y-20 group-hover:scale-110 transition-transform duration-700" />
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md shadow-inner">
+                <ShieldCheck size={28} className="text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">Upgrade to Vestiga Pro</h3>
+                <p className="text-teal-50/80 text-sm mt-1 max-w-md">
+                  Unlock unlimited passwords, AI security scans, and advanced threat detection. 
+                  Currently using <span className="font-bold text-white">{itemCount}/16</span> passwords.
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={handleUpgrade}
+              className="bg-white text-teal-700 hover:bg-teal-50 px-8 py-3 rounded-xl font-bold transition-all shadow-md active:scale-95 flex items-center gap-2 shrink-0"
+            >
+              Get Pro Now
+              <ArrowRight size={18} />
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       <div className="flex flex-col gap-6">
         

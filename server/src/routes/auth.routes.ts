@@ -9,6 +9,33 @@ import { env } from '../config/env.js';
 
 const router = Router();
 
+// ─── GET /api/auth/profile ───────────────────────────────────────
+router.get('/profile', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const user = await db.findUserById(req.user!.userId);
+    const items = await db.getVaultItems(req.user!.userId);
+
+    if (!user) {
+      res.status(404).json({ success: false, error: 'User not found' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: user.id,
+        email: user.email,
+        tier: user.tier || 'free',
+        itemCount: items.length,
+      },
+    });
+  } catch (error) {
+    console.error('[Auth] Profile fetch error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+
 // ─── Validation Schemas ─────────────────────────────────────────
 
 const registerSchema = z.object({
@@ -75,7 +102,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     );
 
     // Create device session
-    const payload: AuthPayload = { userId: user.id, email: user.email };
+    const payload: AuthPayload = { userId: user.id, email: user.email, tier: user.tier || 'free' };
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
     const refreshHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
@@ -135,7 +162,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     }
 
     // Generate tokens
-    const payload: AuthPayload = { userId: user.id, email: user.email };
+    const payload: AuthPayload = { userId: user.id, email: user.email, tier: user.tier || 'free' };
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
     const refreshHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
@@ -199,8 +226,8 @@ router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
     }
 
     // Rotate tokens
-    const newAccessToken = generateAccessToken({ userId: decoded.userId, email: decoded.email });
-    const newRefreshToken = generateRefreshToken({ userId: decoded.userId, email: decoded.email });
+    const newAccessToken = generateAccessToken({ userId: decoded.userId, email: decoded.email, tier: decoded.tier || 'free' });
+    const newRefreshToken = generateRefreshToken({ userId: decoded.userId, email: decoded.email, tier: decoded.tier || 'free' });
     const newHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
 
     await db.updateSessionRefreshHash(session.id, newHash);

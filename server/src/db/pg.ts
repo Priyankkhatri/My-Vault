@@ -21,6 +21,9 @@ interface UserRow {
   kdf_params: any;
   created_at: Date;
   updated_at: Date;
+  tier: string;
+  razorpay_customer_id?: string;
+  razorpay_subscription_id?: string;
 }
 
 interface VaultItemRow {
@@ -96,6 +99,16 @@ export async function updateUserAuth(userId: string, authHash: string, kdfSalt: 
 export async function deleteUser(userId: string) {
   const query = 'DELETE FROM users WHERE id = $1;';
   const { rowCount } = await pool.query(query, [userId]);
+  return rowCount! > 0;
+}
+
+export async function updateUserTier(userId: string, tier: string, subscriptionId: string, customerId?: string) {
+  const query = `
+    UPDATE users 
+    SET tier = $1, razorpay_subscription_id = $2, razorpay_customer_id = COALESCE($3, razorpay_customer_id), updated_at = NOW()
+    WHERE id = $4;
+  `;
+  const { rowCount } = await pool.query(query, [tier, subscriptionId, customerId, userId]);
   return rowCount! > 0;
 }
 

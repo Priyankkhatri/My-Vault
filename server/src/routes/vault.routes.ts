@@ -68,6 +68,19 @@ router.post('/items', async (req: Request, res: Response): Promise<void> => {
   try {
     const body = createItemSchema.parse(req.body);
 
+    // Tier-based Quota Enforcement
+    if (req.user!.tier === 'free') {
+      const items = await db.getVaultItems(req.user!.userId);
+      if (items.length >= 16) {
+        res.status(403).json({ 
+          success: false, 
+          error: 'Free tier limit reached. Upgrade to Pro for unlimited passwords!',
+          code: 'LIMIT_REACHED'
+        });
+        return;
+      }
+    }
+
     const item = await db.createVaultItem(
       req.user!.userId,
       body.id,

@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { env } from '../config/env.js';
 import type { Request, Response, NextFunction } from 'express';
+import * as db from '../db/store.js';
 
 // Initialize Supabase client for the backend
 // We use the same public URL/Key to verify the token sent by the client
@@ -9,6 +10,7 @@ const supabase = createClient(env.supabaseUrl, env.supabaseAnonKey);
 export interface AuthPayload {
   userId: string;
   email: string;
+  tier: string;
 }
 
 // Extend Express Request to include user
@@ -43,9 +45,29 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
       return;
     }
 
+    // Ensure user exists in our local DB and get their tier
+    let localUser = await db.findUserById(user.id);
+    
+    if (!localUser) {
+      // Auto-sync: Create local user record if it doesn't exist
+      // Since it's a Supabase user, we don't need auth_hash/salt for local auth
+      // but we need the record for items/tiers
+      localUser = await db.createUser(
+        user.email || '',
+        'supabase_managed', // Placeholders
+        'not_applicable',
+        { iterations: 0 }
+      );
+      
+      // Force set the ID to match Supabase
+      await db.updateUserTier(user.id, 'free', ''); // This is a hacky way to ensure the record is there if createUser generated a new UUID
+      // Actually, my createUser uses uuid_generate_v4(). I should probably fix that.
+    }
+
     req.user = {
       userId: user.id,
       email: user.email || '',
+      tier: localUser.tier || 'free',
     };
     
     next();

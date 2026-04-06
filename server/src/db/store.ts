@@ -28,6 +28,7 @@ export const createUser = usePostgres ? pg.createUser : memCreateUser;
 export const findUserByEmail = usePostgres ? pg.findUserByEmail : memFindUserByEmail;
 export const findUserById = usePostgres ? pg.findUserById : memFindUserById;
 export const updateUserAuth = usePostgres ? pg.updateUserAuth : memUpdateUserAuth;
+export const updateUserTier = usePostgres ? pg.updateUserTier : memUpdateUserTier;
 export const deleteUser = usePostgres ? pg.deleteUser : memDeleteUser;
 
 export const createVaultItem = usePostgres ? pg.createVaultItem : memCreateVaultItem;
@@ -59,6 +60,9 @@ interface UserRow {
   kdf_params: Record<string, unknown>;
   created_at: Date;
   updated_at: Date;
+  tier: string;
+  razorpay_customer_id?: string;
+  razorpay_subscription_id?: string;
 }
 
 interface VaultItemRow {
@@ -133,7 +137,7 @@ loadFromDisk();
 async function memCreateUser(email: string, authHash: string, salt: string, kdfParams: Record<string, unknown>) {
   const id = uuid();
   const now = new Date();
-  const user: UserRow = { id, email, auth_hash: authHash, kdf_salt: salt, kdf_params: kdfParams, created_at: now, updated_at: now };
+  const user: UserRow = { id, email, auth_hash: authHash, kdf_salt: salt, kdf_params: kdfParams, created_at: now, updated_at: now, tier: 'free' };
   store.users.set(id, user);
   saveToDisk();
   return user;
@@ -172,6 +176,19 @@ async function memDeleteUser(userId: string) {
     for (const [sessionId, session] of store.deviceSessions.entries()) {
       if (session.user_id === userId) store.deviceSessions.delete(sessionId);
     }
+    saveToDisk();
+    return true;
+  }
+  return false;
+}
+
+async function memUpdateUserTier(userId: string, tier: string, subscriptionId: string, customerId?: string) {
+  const user = store.users.get(userId);
+  if (user) {
+    user.tier = tier;
+    user.razorpay_subscription_id = subscriptionId;
+    if (customerId) user.razorpay_customer_id = customerId;
+    user.updated_at = new Date();
     saveToDisk();
     return true;
   }

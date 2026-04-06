@@ -29,9 +29,9 @@
    */
   function positionDropdown(container, input) {
     const rect = input.getBoundingClientRect();
-    container.style.position = "absolute";
-    container.style.top = `${window.scrollY + rect.bottom + 4}px`;
-    container.style.left = `${window.scrollX + rect.left}px`;
+    container.style.position = "fixed";
+    container.style.top = `${rect.bottom + 4}px`;
+    container.style.left = `${rect.left}px`;
     container.style.zIndex = "2147483647";
   }
 

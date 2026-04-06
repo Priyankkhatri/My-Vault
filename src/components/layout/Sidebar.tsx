@@ -15,8 +15,47 @@ interface SidebarProps {
 }
 
 export function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
-  const { signOut, user } = useAuth();
+  const { signOut, user, tier, itemCount, refreshProfile, session } = useAuth();
   const navigate = useNavigate();
+
+  const handleUpgrade = async () => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${baseUrl}/payments/create-subscription`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`
+        }
+      });
+      const result = await response.json();
+
+      if (result.alreadyPro) {
+        alert('You are already a Pro member!');
+        return;
+      }
+
+      const options = {
+        key: result.data.keyId,
+        subscription_id: result.data.subscriptionId,
+        name: 'Vestiga Pro',
+        description: 'Monthly Subscription',
+        handler: async function (response: any) {
+          console.log('[Razorpay] Payment Success:', response);
+          await refreshProfile();
+          alert('Welcome to Vestiga Pro! Your account has been upgraded.');
+        },
+        theme: {
+          color: '#0d9488',
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      console.error('[Sidebar] Upgrade error:', err);
+      alert('Failed to start checkout. Please try again.');
+    }
+  };
 
   const handleLogout = async () => {
     await signOut();
@@ -83,8 +122,46 @@ export function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
           ))}
         </nav>
 
-        {/* User Profile & Logout */}
-        <div className="p-4 mt-auto">
+        {/* Upgrade Hook & User Profile */}
+        <div className="p-4 mt-auto flex flex-col gap-3">
+          
+          {/* Pro Upgrade Card */}
+          <div className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-xl p-3 border border-teal-100/50 shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-16 h-16 bg-teal-500/10 rounded-full blur-xl transform translate-x-4 -translate-y-4" />
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold text-teal-800 uppercase tracking-wider">{tier === 'pro' ? 'Pro Plan' : 'Free Plan'}</span>
+              <span className={`text-[10px] font-semibold ${tier === 'pro' ? 'text-amber-600 bg-amber-100/50' : 'text-teal-600 bg-teal-100/50'} px-1.5 py-0.5 rounded`}>
+                {tier === 'pro' ? 'Premium' : 'Basic'}
+              </span>
+            </div>
+            
+            <div className="mb-1 flex items-center justify-between text-[11px] font-medium text-teal-900">
+              <span>Passwords Used</span>
+              <span>{itemCount} / {tier === 'pro' ? '∞' : '16'}</span>
+            </div>
+            <div className="h-1.5 w-full bg-teal-100 rounded-full mb-3 overflow-hidden">
+              <div 
+                className={`h-full ${itemCount >= 16 && tier === 'free' ? 'bg-red-500' : 'bg-teal-500'} rounded-full transition-all duration-500`} 
+                style={{ width: `${tier === 'pro' ? 100 : Math.min((itemCount / 16) * 100, 100)}%` }} 
+              />
+            </div>
+
+            {tier === 'free' && (
+              <button 
+                onClick={handleUpgrade}
+                className="w-full bg-white hover:bg-teal-600 hover:text-white text-teal-700 border border-teal-200 hover:border-teal-600 text-[11px] font-bold py-1.5 rounded-lg shadow-sm transition-all text-center"
+              >
+                Upgrade to Pro
+              </button>
+            )}
+            {tier === 'pro' && (
+              <div className="text-[10px] font-semibold text-teal-600 text-center py-1">
+                Pro Features Unlocked ✨
+              </div>
+            )}
+          </div>
+
+          {/* User Profile */}
           <div className="flex flex-col gap-1 p-3 rounded-xl border border-gray-200 bg-white shadow-sm">
             <div className="flex items-center gap-2.5 mb-2">
               <div className="w-8 h-8 rounded-full bg-teal-50 border border-teal-100 flex items-center justify-center shrink-0">
