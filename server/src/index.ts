@@ -98,6 +98,30 @@ app.get('/api/health', (_req, res) => {
     },
   });
 });
+// TEMPORARY: Debug endpoint to test Supabase auth
+app.get('/api/debug-auth', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    res.json({ step: 'no-token', message: 'No Authorization header sent' });
+    return;
+  }
+  const token = authHeader.split(' ')[1];
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const testClient = createClient(env.supabaseUrl, env.supabaseAnonKey);
+    const { data, error } = await testClient.auth.getUser(token);
+    res.json({
+      step: 'supabase-verify',
+      supabaseUrl: env.supabaseUrl ? env.supabaseUrl.substring(0, 30) + '...' : 'EMPTY',
+      hasKey: !!env.supabaseAnonKey,
+      tokenPrefix: token.substring(0, 20) + '...',
+      user: data?.user ? { id: data.user.id, email: data.user.email } : null,
+      error: error ? { message: error.message, status: error.status } : null,
+    });
+  } catch (err: any) {
+    res.json({ step: 'crash', error: err.message });
+  }
+});
 
 // Audit logs endpoint
 app.get('/api/audit-logs', authMiddleware, async (req, res) => {

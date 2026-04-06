@@ -41,7 +41,8 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     const { data: { user }, error } = await supabase.auth.getUser(token);
 
     if (error || !user) {
-      res.status(401).json({ success: false, error: 'Invalid or expired session' });
+      console.error('[Auth Middleware] Supabase getUser failed:', error?.message || 'No user returned');
+      res.status(401).json({ success: false, error: 'Invalid or expired session', detail: error?.message });
       return;
     }
 
