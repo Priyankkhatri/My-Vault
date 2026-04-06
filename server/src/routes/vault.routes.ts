@@ -109,7 +109,7 @@ router.put('/items/:id', async (req: Request, res: Response): Promise<void> => {
 
     const result = await db.updateVaultItem(
       req.user!.userId,
-      req.params.id,
+      req.params.id as string,
       body.title,
       body.username,
       body.password,
@@ -154,7 +154,7 @@ router.put('/items/:id', async (req: Request, res: Response): Promise<void> => {
 
 router.delete('/items/:id', async (req: Request, res: Response): Promise<void> => {
   try {
-    const deleted = await db.deleteVaultItem(req.user!.userId, req.params.id);
+    const deleted = await db.deleteVaultItem(req.user!.userId, req.params.id as string);
     if (!deleted) {
       res.status(404).json({ success: false, error: 'Item not found' });
       return;

@@ -1,4 +1,4 @@
--- My-Vault Initial Database Schema
+-- Vestiga Initial Database Schema
 -- Run against PostgreSQL 16+
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

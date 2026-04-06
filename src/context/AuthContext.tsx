@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             </div>
             <div className="flex items-center gap-3 text-teal-600 font-semibold uppercase tracking-widest text-xs">
               <Loader2 size={16} className="animate-spin" />
-              Initializing Perimeter
+              Initializing Vestiga
             </div>
           </motion.div>
         ) : (

@@ -20,8 +20,11 @@ export function Sidebar() {
 
   return (
     <aside className="fixed left-0 top-0 h-full w-60 bg-white border-r border-gray-200 flex flex-col z-40">
-      <div className="h-16 flex items-center px-6 border-b border-gray-100">
-        <span className="text-base font-semibold text-gray-900">My-Vault</span>
+      <div className="h-16 flex items-center gap-2.5 px-6 border-b border-gray-100">
+        <div className="w-7 h-7 bg-gradient-to-br from-teal-500 to-teal-700 rounded-lg flex items-center justify-center shadow-sm">
+          <ShieldCheck size={15} className="text-white" />
+        </div>
+        <span className="text-base font-bold text-gray-900 tracking-tight">Vestiga</span>
       </div>
 
       <nav className="flex-1 py-4 px-3 space-y-1">

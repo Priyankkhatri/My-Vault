@@ -298,3 +298,9 @@ export async function getAuditLogs(userId: string, limit = 50) {
     .sort((a, b) => b.created_at.getTime() - a.created_at.getTime())
     .slice(0, limit);
 }
+
+export async function getQuotaUsage(userId: string, feature: string) {
+  // Mock implementation for development.
+  // In production, this would query a usages table.
+  return 0;
+}

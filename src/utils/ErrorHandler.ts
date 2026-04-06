@@ -1,6 +1,6 @@
 /**
  * ErrorHandler.ts
- * Centralized error management for My-Vault.
+ * Centralized error management for Vestiga.
  */
 
 export enum ErrorCategory {

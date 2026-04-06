@@ -18,6 +18,10 @@ const SecurityAudit = React.lazy(() => import('./pages/SecurityAudit').then(modu
 const Settings = React.lazy(() => import('./pages/Settings').then(module => ({ default: module.Settings })));
 const Login = React.lazy(() => import('./pages/Login').then(module => ({ default: module.Login })));
 const Signup = React.lazy(() => import('./pages/Signup').then(module => ({ default: module.Signup })));
+const LandingPage = React.lazy(() => import('./pages/LandingPage').then(module => ({ default: module.LandingPage })));
+const PrivacyPolicy = React.lazy(() => import('./pages/PrivacyPolicy').then(module => ({ default: module.PrivacyPolicy })));
+const TermsOfService = React.lazy(() => import('./pages/TermsOfService').then(module => ({ default: module.TermsOfService })));
+const Contact = React.lazy(() => import('./pages/Contact').then(module => ({ default: module.Contact })));
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
@@ -70,9 +74,15 @@ function AppRoutes() {
     <>
       <Suspense fallback={<LoadingScreen />}>
         <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={session ? <Navigate to="/dashboard" replace /> : <LandingPage />} />
           <Route path="/login" element={!session ? <Login /> : <Navigate to="/dashboard" replace />} />
           <Route path="/signup" element={!session ? <Signup /> : <Navigate to="/dashboard" replace />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/contact" element={<Contact />} />
           
+          {/* Protected Routes */}
           <Route path="/*" element={
             <AuthGuard>
               <MasterPasswordProvider>
@@ -96,7 +106,7 @@ function AppRoutes() {
             background: '#fff',
             color: '#374151',
             boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-            border: '1px solid #f3f4f6', // border-gray-100 equivalent since you can't use tailwind class names purely inside style property
+            border: '1px solid #f3f4f6',
             padding: '12px 16px',
             fontWeight: '600',
           },

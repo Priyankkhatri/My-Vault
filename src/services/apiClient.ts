@@ -1,5 +1,5 @@
 /**
- * API Client — HTTP layer for My-Vault Backend
+ * API Client — HTTP layer for Vestiga Backend
  *
  * Handles:
  * - Base URL configuration

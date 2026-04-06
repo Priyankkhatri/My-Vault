@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -44,7 +44,131 @@ html, body {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Animations */
+/* ─── Landing Page Dark Glass ─────────────────────────── */
+.glass-card {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.4);
+}
+
+.glass-nav {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ─── Gradient Utilities ──────────────────────────────── */
+.gradient-text {
+  background: linear-gradient(135deg, #5EEAD4 0%, #14B8A6 50%, #0D9488 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-hero {
+  background: linear-gradient(135deg, #F0FDFA 0%, #5EEAD4 40%, #14B8A6 70%, #99F6E4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-border {
+  position: relative;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(94, 234, 212, 0.3), rgba(20, 184, 166, 0.1), rgba(94, 234, 212, 0.3));
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  pointer-events: none;
+}
+
+/* ─── Animated Glow ───────────────────────────────────── */
+.glow-teal {
+  box-shadow:
+    0 0 20px rgba(20, 184, 166, 0.15),
+    0 0 40px rgba(20, 184, 166, 0.1),
+    0 0 80px rgba(20, 184, 166, 0.05);
+}
+
+.glow-teal-strong {
+  box-shadow:
+    0 0 20px rgba(20, 184, 166, 0.3),
+    0 0 60px rgba(20, 184, 166, 0.15),
+    0 0 120px rgba(20, 184, 166, 0.08);
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(20, 184, 166, 0.2), 0 0 40px rgba(20, 184, 166, 0.1); }
+  50% { box-shadow: 0 0 30px rgba(20, 184, 166, 0.35), 0 0 60px rgba(20, 184, 166, 0.2); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+/* ─── Floating Orbs Background ────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(30px, -20px) scale(1.05); }
+  50% { transform: translate(-10px, 20px) scale(0.95); }
+  75% { transform: translate(-30px, -10px) scale(1.02); }
+}
+
+.animate-float {
+  animation: float 20s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float 25s ease-in-out 5s infinite;
+}
+
+.animate-float-slow {
+  animation: float 30s ease-in-out 10s infinite;
+}
+
+/* ─── Ticker Marquee ──────────────────────────────────── */
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-ticker {
+  animation: ticker 30s linear infinite;
+}
+
+/* ─── FAQ Accordion ───────────────────────────────────── */
+.faq-answer {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.faq-answer.open {
+  grid-template-rows: 1fr;
+}
+
+.faq-answer > div {
+  overflow: hidden;
+}
+
+/* ─── Existing Animations ─────────────────────────────── */
 @keyframes shake {
   10%, 90% { transform: translate3d(-1px, 0, 0); }
   20%, 80% { transform: translate3d(2px, 0, 0); }
@@ -91,4 +215,9 @@ html, body {
 @keyframes shimmer {
   0% { background-position: -300px 0; }
   100% { background-position: 300px 0; }
+}
+
+/* ─── Smooth scroll for anchor links ──────────────────── */
+html {
+  scroll-behavior: smooth;
 }

@@ -1,5 +1,5 @@
 /**
- * My-Vault Backend Server
+ * Vestiga Backend Server
  *
  * Express 5 API server providing:
  * - Zero-knowledge vault storage (encrypted blobs only)
@@ -90,7 +90,7 @@ app.listen(env.port, () => {
   console.log(`
 ╔══════════════════════════════════════════════════════╗
 ║                                                      ║
-║   🔐 My-Vault Server v1.0.0                         ║
+║   🛡️ Vestiga Security Server v1.0.0                  ║
 ║                                                      ║
 ║   Port:    ${String(env.port).padEnd(42)}║
 ║   Mode:    ${(env.isProduction ? 'production' : 'development').padEnd(42)}║
