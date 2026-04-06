@@ -4,10 +4,11 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import {
   ShieldCheck, Lock, Fingerprint, Zap, Globe, Brain,
   ChevronDown, ArrowRight, CheckCircle2, Eye, EyeOff,
-  KeyRound, Sparkles, Shield, Mail, Github, Twitter,
+  KeyRound, Sparkles, Shield, Mail, Github,
   Menu, X, ExternalLink, User as UserIcon, LogOut, Settings as SettingsIcon
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+
 // ─── Data ────────────────────────────────────────────────────────
 
 const FEATURES = [
@@ -139,16 +140,16 @@ function Navbar() {
   return (
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? 'glass-nav shadow-2xl shadow-black/20' : 'bg-transparent'
+        scrolled ? 'bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm' : 'bg-transparent'
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 bg-gradient-to-br from-teal-400 to-teal-600 rounded-lg flex items-center justify-center shadow-lg shadow-teal-500/25 group-hover:shadow-teal-500/40 transition-shadow">
+          <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-teal-700 rounded-lg flex items-center justify-center shadow-md">
             <ShieldCheck size={18} className="text-white" />
           </div>
-          <span className="text-lg font-bold text-white tracking-tight">Vestiga</span>
+          <span className="text-xl font-bold text-gray-900 tracking-tight">Vestiga</span>
         </Link>
 
         {/* Desktop Links */}
@@ -157,7 +158,7 @@ function Navbar() {
             <a
               key={link.label}
               href={link.href}
-              className="text-sm font-medium text-slate-400 hover:text-white transition-colors"
+              className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
             >
               {link.label}
             </a>
@@ -170,13 +171,13 @@ function Navbar() {
             <>
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-2 text-sm font-semibold text-white bg-white/5 border border-white/10 hover:bg-white/10 px-4 py-2 rounded-lg transition-all"
+                className="flex items-center gap-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 px-4 py-2 rounded-lg transition-all shadow-sm"
               >
-                <div className="w-5 h-5 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center">
+                <div className="w-5 h-5 rounded-full bg-gradient-to-br from-teal-500 to-teal-700 flex items-center justify-center">
                   <UserIcon size={12} className="text-white" />
                 </div>
                 <span>{user?.email?.split('@')[0] || 'Account'}</span>
-                <ChevronDown size={14} className={`transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={14} className={`transition-transform text-gray-400 ${dropdownOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {/* Dropdown */}
@@ -184,26 +185,26 @@ function Navbar() {
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="absolute top-12 right-0 w-48 bg-[#0F172A] border border-white/10 rounded-xl shadow-xl shadow-black/50 py-1 overflow-hidden"
+                  className="absolute top-12 right-0 w-56 bg-white border border-gray-100 rounded-xl shadow-xl shadow-gray-200/50 py-2 overflow-hidden"
                 >
                   <Link
                     to="/dashboard"
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 transition-colors font-medium"
                   >
-                    <ShieldCheck size={16} className="text-teal-400" />
+                    <ShieldCheck size={16} className="text-teal-600" />
                     Dashboard
                   </Link>
                   <Link
                     to="/settings"
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors"
                   >
                     <SettingsIcon size={16} />
                     Settings
                   </Link>
-                  <div className="h-px bg-white/10 my-1 font-mono" />
+                  <div className="h-px bg-gray-100 my-1" />
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-400/10 transition-colors text-left"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors text-left"
                   >
                     <LogOut size={16} />
                     Log Out
@@ -215,13 +216,13 @@ function Navbar() {
             <>
               <Link
                 to="/login"
-                className="text-sm font-medium text-slate-300 hover:text-white px-4 py-2 rounded-lg transition-colors"
+                className="text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg transition-colors"
               >
                 Login
               </Link>
               <Link
                 to="/signup"
-                className="text-sm font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-300 hover:to-teal-400 px-5 py-2 rounded-lg transition-all shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-px active:scale-[0.98]"
+                className="text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 px-5 py-2.5 rounded-lg transition-all shadow-md shadow-teal-600/20 active:scale-[0.98]"
               >
                 Get Started Free
               </Link>
@@ -231,7 +232,7 @@ function Navbar() {
 
         {/* Mobile Menu Button */}
         <button
-          className="md:hidden text-white p-2"
+          className="md:hidden text-gray-600 p-2"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label="Toggle mobile menu"
         >
@@ -244,40 +245,40 @@ function Navbar() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="md:hidden glass-nav border-t border-white/5 px-6 py-6 space-y-4"
+          className="md:hidden bg-white border-t border-gray-100 px-6 py-6 shadow-xl shadow-gray-200/50 space-y-4 absolute left-0 right-0"
         >
           {navLinks.map((link) => (
             <a
               key={link.label}
               href={link.href}
               onClick={() => setMobileOpen(false)}
-              className="block text-sm font-medium text-slate-300 hover:text-white transition-colors py-2"
+              className="block text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors py-2"
             >
               {link.label}
             </a>
           ))}
-          <div className="pt-4 border-t border-white/10 space-y-3">
+          <div className="pt-4 border-t border-gray-100 space-y-3">
             {session ? (
               <>
-                <div className="px-2 pb-2 mb-2 border-b border-white/5 text-sm font-medium text-slate-400">
+                <div className="px-2 pb-2 mb-2 border-b border-gray-50 text-sm font-medium text-gray-500">
                   {user?.email}
                 </div>
-                <Link to="/dashboard" className="block text-center text-sm font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 py-2.5 rounded-lg mb-2">
+                <Link to="/dashboard" className="block text-center text-sm font-semibold text-white bg-teal-600 py-2.5 rounded-lg mb-2">
                   Dashboard
                 </Link>
-                <Link to="/settings" className="block text-center text-sm font-medium text-slate-300 py-2.5 rounded-lg border border-white/10 mb-2">
+                <Link to="/settings" className="block text-center text-sm font-medium text-gray-600 py-2.5 rounded-lg border border-gray-200 bg-gray-50 mb-2">
                   Settings
                 </Link>
-                <button onClick={handleLogout} className="w-full block text-center text-sm font-medium text-red-400 py-2.5 rounded-lg border border-red-400/20 bg-red-400/5">
+                <button onClick={handleLogout} className="w-full block text-center text-sm font-medium text-red-600 py-2.5 rounded-lg border border-red-200 bg-red-50">
                   Log Out
                 </button>
               </>
             ) : (
               <>
-                <Link to="/login" className="block text-center text-sm font-medium text-slate-300 py-2.5 rounded-lg border border-white/10">
+                <Link to="/login" className="block text-center text-sm font-medium text-gray-700 py-2.5 rounded-lg border border-gray-200 bg-gray-50">
                   Login
                 </Link>
-                <Link to="/signup" className="block text-center text-sm font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 py-2.5 rounded-lg">
+                <Link to="/signup" className="block text-center text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 shadow-md shadow-teal-600/20 py-2.5 rounded-lg">
                   Get Started Free
                 </Link>
               </>
@@ -296,33 +297,17 @@ function HeroSection() {
   const { session } = useAuth();
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
-      {/* Background Orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-teal-500/10 rounded-full blur-[120px] animate-float" />
-        <div className="absolute bottom-1/3 right-1/4 w-[400px] h-[400px] bg-cyan-500/8 rounded-full blur-[100px] animate-float-delayed" />
-        <div className="absolute top-1/2 left-1/2 w-[300px] h-[300px] bg-emerald-500/6 rounded-full blur-[80px] animate-float-slow" />
-      </div>
-
-      {/* Grid Pattern */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-[0.03]"
-        style={{
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-          backgroundSize: '60px 60px',
-        }}
-      />
-
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16 bg-white">
       <motion.div style={{ y, opacity }} className="relative z-10 max-w-4xl mx-auto px-6 text-center">
         {/* Badge */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-teal-500/20 bg-teal-500/5 mb-8"
+          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-teal-200 bg-teal-50 mb-8"
         >
-          <span className="w-2 h-2 bg-teal-400 rounded-full animate-pulse" />
-          <span className="text-xs font-semibold text-teal-400 uppercase tracking-wider">Open Source & Free Forever</span>
+          <span className="w-2 h-2 bg-teal-500 rounded-full animate-pulse" />
+          <span className="text-xs font-bold text-teal-700 uppercase tracking-wider">Open Source & Free Forever</span>
         </motion.div>
 
         {/* Headline */}
@@ -330,12 +315,12 @@ function HeroSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="text-5xl sm:text-6xl lg:text-7xl font-black text-white leading-[1.1] tracking-tight mb-6"
+          className="text-5xl sm:text-6xl lg:text-7xl font-black text-gray-900 leading-[1.15] tracking-tight mb-6"
         >
           Your passwords
           <br />
           deserve a{' '}
-          <span className="gradient-text-hero">fortress</span>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-cyan-600">fortress</span>
         </motion.h1>
 
         {/* Subtext */}
@@ -343,11 +328,11 @@ function HeroSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35 }}
-          className="text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed"
+          className="text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto mb-10 leading-relaxed"
         >
           Vestiga is a zero-knowledge, end-to-end encrypted password manager
           with AI-powered security audits and a seamless browser extension.
-          <span className="text-slate-300 font-medium"> We can't see your passwords — only you can.</span>
+          <span className="text-gray-700 font-medium"> We can't see your passwords — only you can.</span>
         </motion.p>
 
         {/* CTAs */}
@@ -360,7 +345,7 @@ function HeroSection() {
           {session ? (
             <Link
               to="/dashboard"
-              className="group inline-flex items-center gap-2 text-base font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-300 hover:to-teal-400 px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
+              className="group inline-flex items-center gap-2 text-base font-semibold text-white bg-teal-600 hover:bg-teal-700 px-8 py-3.5 rounded-xl transition-all shadow-md shadow-teal-600/20 hover:-translate-y-0.5 active:scale-[0.98]"
             >
               Go to Dashboard
               <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
@@ -368,7 +353,7 @@ function HeroSection() {
           ) : (
             <Link
               to="/signup"
-              className="group inline-flex items-center gap-2 text-base font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-300 hover:to-teal-400 px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
+              className="group inline-flex items-center gap-2 text-base font-semibold text-white bg-teal-600 hover:bg-teal-700 px-8 py-3.5 rounded-xl transition-all shadow-md shadow-teal-600/20 hover:-translate-y-0.5 active:scale-[0.98]"
             >
               Get Started Free
               <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
@@ -376,7 +361,7 @@ function HeroSection() {
           )}
           <a
             href="#features"
-            className="inline-flex items-center gap-2 text-base font-medium text-slate-400 hover:text-white px-8 py-3.5 rounded-xl border border-white/10 hover:border-white/20 transition-all hover:bg-white/5"
+            className="inline-flex items-center gap-2 text-base font-medium text-gray-600 hover:text-gray-900 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 px-8 py-3.5 rounded-xl transition-all shadow-sm"
           >
             See How It Works
             <ChevronDown size={18} />
@@ -388,37 +373,22 @@ function HeroSection() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.7 }}
-          className="mt-16 flex items-center justify-center gap-6 text-xs text-slate-500"
+          className="mt-12 flex items-center justify-center gap-6 text-xs text-gray-500 font-medium"
         >
           <div className="flex items-center gap-1.5">
-            <ShieldCheck size={14} className="text-teal-500" />
+            <ShieldCheck size={14} className="text-teal-600" />
             <span>E2E Encrypted</span>
           </div>
-          <div className="w-1 h-1 rounded-full bg-slate-700" />
+          <div className="w-1 h-1 rounded-full bg-gray-300" />
           <div className="flex items-center gap-1.5">
-            <Lock size={14} className="text-teal-500" />
+            <Lock size={14} className="text-teal-600" />
             <span>Zero-Knowledge</span>
           </div>
-          <div className="w-1 h-1 rounded-full bg-slate-700" />
+          <div className="w-1 h-1 rounded-full bg-gray-300" />
           <div className="flex items-center gap-1.5">
-            <Github size={14} className="text-teal-500" />
+            <Github size={14} className="text-gray-900" />
             <span>Open Source</span>
           </div>
-        </motion.div>
-      </motion.div>
-
-      {/* Scroll Indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.2 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2"
-      >
-        <motion.div
-          animate={{ y: [0, 8, 0] }}
-          transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-        >
-          <ChevronDown size={20} className="text-slate-600" />
         </motion.div>
       </motion.div>
     </section>
@@ -427,11 +397,11 @@ function HeroSection() {
 
 function TrustTicker() {
   return (
-    <section className="relative py-6 border-y border-white/5 overflow-hidden">
+    <section className="relative py-8 bg-gray-50 border-y border-gray-200 overflow-hidden">
       <div className="animate-ticker flex items-center gap-12 whitespace-nowrap">
         {[...TRUST_TICKER, ...TRUST_TICKER].map((item, i) => (
-          <div key={i} className="flex items-center gap-3 text-sm font-medium text-slate-500">
-            <CheckCircle2 size={14} className="text-teal-500/60 shrink-0" />
+          <div key={i} className="flex items-center gap-3 text-sm font-semibold text-gray-500">
+            <CheckCircle2 size={16} className="text-teal-500 shrink-0" />
             <span>{item}</span>
           </div>
         ))}
@@ -442,27 +412,25 @@ function TrustTicker() {
 
 function FeaturesSection() {
   return (
-    <section id="features" className="py-24 sm:py-32 relative">
+    <section id="features" className="py-24 sm:py-32 bg-white relative">
       <div className="max-w-7xl mx-auto px-6">
-        {/* Section Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-100px' }}
           className="text-center mb-16"
         >
-          <span className="text-xs font-bold text-teal-400 uppercase tracking-[0.2em] mb-3 block">Features</span>
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+          <span className="text-xs font-bold text-teal-600 uppercase tracking-[0.2em] mb-3 block">Features</span>
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
             Everything you need.{' '}
-            <span className="text-slate-500">Nothing you don't.</span>
+            <span className="text-gray-400">Nothing you don't.</span>
           </h2>
-          <p className="text-slate-400 max-w-xl mx-auto">
+          <p className="text-gray-500 max-w-xl mx-auto">
             A lean, fast, and fiercely secure password manager built for people who care about their digital safety.
           </p>
         </motion.div>
 
-        {/* Feature Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {FEATURES.map((feature, i) => (
             <motion.div
               key={feature.title}
@@ -470,18 +438,18 @@ function FeaturesSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-50px' }}
               transition={{ delay: i * 0.08 }}
-              className="glass-card rounded-2xl p-6 group"
+              className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm hover:shadow-md hover:border-gray-200 transition-all group"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-11 h-11 rounded-xl bg-teal-500/10 flex items-center justify-center group-hover:bg-teal-500/20 transition-colors">
-                  <feature.icon size={20} className="text-teal-400" />
+              <div className="flex items-start justify-between mb-6">
+                <div className="w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center group-hover:bg-teal-100 transition-colors">
+                  <feature.icon size={24} className="text-teal-600" />
                 </div>
-                <span className="text-[10px] font-bold text-teal-500/60 uppercase tracking-widest bg-teal-500/5 px-2.5 py-1 rounded-full">
+                <span className="text-[10px] font-bold text-teal-700 uppercase tracking-widest bg-teal-50 px-2.5 py-1 rounded-full border border-teal-100">
                   {feature.badge}
                 </span>
               </div>
-              <h3 className="text-base font-bold text-white mb-2">{feature.title}</h3>
-              <p className="text-sm text-slate-400 leading-relaxed">{feature.description}</p>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">{feature.title}</h3>
+              <p className="text-sm text-gray-500 leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}
         </div>
@@ -492,7 +460,7 @@ function FeaturesSection() {
 
 function SecuritySection() {
   return (
-    <section id="security" className="py-24 sm:py-32 relative">
+    <section id="security" className="py-24 sm:py-32 bg-gray-50 relative border-y border-gray-200">
       <div className="max-w-7xl mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -500,10 +468,10 @@ function SecuritySection() {
           viewport={{ once: true, margin: '-100px' }}
           className="text-center mb-16"
         >
-          <span className="text-xs font-bold text-teal-400 uppercase tracking-[0.2em] mb-3 block">Security</span>
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+          <span className="text-xs font-bold text-teal-600 uppercase tracking-[0.2em] mb-3 block">Security</span>
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
             Zero-knowledge means{' '}
-            <span className="gradient-text">zero compromise</span>
+            <span className="text-teal-600">zero compromise</span>
           </h2>
         </motion.div>
 
@@ -513,23 +481,23 @@ function SecuritySection() {
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            className="glass-card rounded-2xl p-8"
+            className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm"
           >
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center">
-                <EyeOff size={20} className="text-teal-400" />
+              <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center">
+                <EyeOff size={20} className="text-teal-600" />
               </div>
-              <h3 className="text-lg font-bold text-white">What We Store</h3>
+              <h3 className="text-lg font-bold text-gray-900">What We Store</h3>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {[
                 'Encrypted binary blobs (unreadable)',
                 'Your email address (for login)',
                 'Encrypted vault metadata',
                 'Timestamps for sync',
               ].map((item, i) => (
-                <div key={i} className="flex items-start gap-3 text-sm text-slate-400">
-                  <Lock size={14} className="text-teal-500 mt-0.5 shrink-0" />
+                <div key={i} className="flex items-start gap-3 text-sm text-gray-600 font-medium">
+                  <Lock size={16} className="text-teal-500 mt-0.5 shrink-0" />
                   <span>{item}</span>
                 </div>
               ))}
@@ -541,23 +509,23 @@ function SecuritySection() {
             initial={{ opacity: 0, x: 20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            className="glass-card rounded-2xl p-8 border-teal-500/20"
+            className="bg-white border border-red-100 rounded-2xl p-8 shadow-sm"
           >
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
-                <Eye size={20} className="text-red-400" />
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+                <Eye size={20} className="text-red-500" />
               </div>
-              <h3 className="text-lg font-bold text-white">What We <span className="text-red-400">Cannot</span> See</h3>
+              <h3 className="text-lg font-bold text-gray-900">What We <span className="text-red-500">Cannot</span> See</h3>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {[
                 'Your master password (never sent to us)',
                 'Your actual passwords or credentials',
                 'Your notes, card numbers, or secrets',
                 'Any plaintext data — ever',
               ].map((item, i) => (
-                <div key={i} className="flex items-start gap-3 text-sm text-slate-400">
-                  <X size={14} className="text-red-400 mt-0.5 shrink-0" />
+                <div key={i} className="flex items-start gap-3 text-sm text-gray-600 font-medium">
+                  <X size={16} className="text-red-500 mt-0.5 shrink-0" />
                   <span>{item}</span>
                 </div>
               ))}
@@ -570,20 +538,20 @@ function SecuritySection() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mt-12 max-w-3xl mx-auto glass-card rounded-2xl p-8"
+          className="mt-12 max-w-4xl mx-auto bg-white border border-gray-200 rounded-2xl p-8 shadow-sm text-center"
         >
-          <p className="text-center text-xs font-bold text-teal-400 uppercase tracking-[0.15em] mb-6">Encryption Flow</p>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-[0.15em] mb-6">Encryption Flow</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 text-sm">
             {[
-              { label: 'Your Password', color: 'text-white' },
-              { label: '→', color: 'text-slate-600' },
-              { label: 'PBKDF2 Key Derivation', color: 'text-yellow-400' },
-              { label: '→', color: 'text-slate-600' },
-              { label: 'AES-256-GCM Encryption', color: 'text-teal-400' },
-              { label: '→', color: 'text-slate-600' },
-              { label: 'Encrypted Blob (stored)', color: 'text-emerald-400' },
+              { label: 'Your Password', color: 'text-gray-900', bg: 'bg-gray-100' },
+              { label: '→', color: 'text-gray-300', bg: 'transparent' },
+              { label: 'PBKDF2 Key Derivation', color: 'text-yellow-700', bg: 'bg-yellow-50' },
+              { label: '→', color: 'text-gray-300', bg: 'transparent' },
+              { label: 'AES-256-GCM', color: 'text-teal-700', bg: 'bg-teal-50' },
+              { label: '→', color: 'text-gray-300', bg: 'transparent' },
+              { label: 'Encrypted Blob', color: 'text-gray-500', bg: 'bg-gray-50 border border-gray-200' },
             ].map((step, i) => (
-              <span key={i} className={`font-mono font-medium ${step.color} text-center`}>
+              <span key={i} className={`font-mono font-medium px-3 py-1 rounded-lg ${step.color} ${step.bg}`}>
                 {step.label}
               </span>
             ))}
@@ -597,7 +565,7 @@ function SecuritySection() {
 function HowItWorks() {
   const { session } = useAuth();
   return (
-    <section id="how-it-works" className="py-24 sm:py-32 relative">
+    <section id="how-it-works" className="py-24 sm:py-32 bg-white relative">
       <div className="max-w-5xl mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -605,13 +573,13 @@ function HowItWorks() {
           viewport={{ once: true, margin: '-100px' }}
           className="text-center mb-16"
         >
-          <span className="text-xs font-bold text-teal-400 uppercase tracking-[0.2em] mb-3 block">How It Works</span>
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-            Secure in <span className="gradient-text">three steps</span>
+          <span className="text-xs font-bold text-teal-600 uppercase tracking-[0.2em] mb-3 block">How It Works</span>
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+            Secure in <span className="text-teal-600">three steps</span>
           </h2>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-3 gap-10">
           {HOW_IT_WORKS.map((step, i) => (
             <motion.div
               key={step.step}
@@ -623,17 +591,17 @@ function HowItWorks() {
             >
               {/* Connector Line (desktop only) */}
               {i < HOW_IT_WORKS.length - 1 && (
-                <div className="hidden md:block absolute top-10 left-[60%] w-[80%] h-px bg-gradient-to-r from-teal-500/30 to-transparent" />
+                <div className="hidden md:block absolute top-[40px] left-[60%] w-[80%] h-px border-t border-dashed border-gray-300" />
               )}
 
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-teal-500/10 mb-6 relative">
-                <step.icon size={32} className="text-teal-400" />
-                <span className="absolute -top-2 -right-2 w-7 h-7 bg-slate-800 border-2 border-teal-500/30 rounded-full flex items-center justify-center text-xs font-bold text-teal-400">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-teal-50 mb-6 relative border border-teal-100 shadow-sm z-10">
+                <step.icon size={32} className="text-teal-600" />
+                <span className="absolute -top-3 -right-3 w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center text-xs font-bold text-teal-600 shadow-sm">
                   {step.step}
                 </span>
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">{step.title}</h3>
-              <p className="text-sm text-slate-400 leading-relaxed max-w-xs mx-auto">{step.description}</p>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">{step.title}</h3>
+              <p className="text-sm text-gray-500 leading-relaxed max-w-xs mx-auto">{step.description}</p>
             </motion.div>
           ))}
         </div>
@@ -643,12 +611,12 @@ function HowItWorks() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mt-16"
+          className="text-center mt-20"
         >
           {session ? (
             <Link
               to="/dashboard"
-              className="group inline-flex items-center gap-2 text-base font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-300 hover:to-teal-400 px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
+              className="group inline-flex items-center gap-2 text-base font-semibold text-white bg-teal-600 hover:bg-teal-700 px-8 py-3.5 rounded-xl transition-all shadow-md shadow-teal-600/20 active:scale-[0.98]"
             >
               Go to Dashboard
               <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
@@ -656,7 +624,7 @@ function HowItWorks() {
           ) : (
             <Link
               to="/signup"
-              className="group inline-flex items-center gap-2 text-base font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-300 hover:to-teal-400 px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
+              className="group inline-flex items-center gap-2 text-base font-semibold text-white bg-teal-600 hover:bg-teal-700 px-8 py-3.5 rounded-xl transition-all shadow-md shadow-teal-600/20 active:scale-[0.98]"
             >
               Create Your Vault
               <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
@@ -672,7 +640,7 @@ function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section id="faq" className="py-24 sm:py-32 relative">
+    <section id="faq" className="py-24 sm:py-32 bg-gray-50 relative border-y border-gray-200">
       <div className="max-w-3xl mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -680,13 +648,13 @@ function FAQSection() {
           viewport={{ once: true, margin: '-100px' }}
           className="text-center mb-16"
         >
-          <span className="text-xs font-bold text-teal-400 uppercase tracking-[0.2em] mb-3 block">FAQ</span>
-          <h2 className="text-3xl sm:text-4xl font-bold text-white">
+          <span className="text-xs font-bold text-teal-600 uppercase tracking-[0.2em] mb-3 block">FAQ</span>
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
             Common questions
           </h2>
         </motion.div>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           {FAQS.map((faq, i) => (
             <motion.div
               key={i}
@@ -694,26 +662,24 @@ function FAQSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.05 }}
-              className="glass-card rounded-xl overflow-hidden"
+              className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:border-teal-200 transition-colors"
             >
               <button
                 onClick={() => setOpenIndex(openIndex === i ? null : i)}
-                className="w-full flex items-center justify-between p-5 text-left"
+                className="w-full flex items-center justify-between p-5 text-left bg-transparent border-none focus:outline-none"
               >
-                <span className="text-sm font-semibold text-white pr-4">{faq.q}</span>
+                <span className="text-sm font-semibold text-gray-900 pr-4">{faq.q}</span>
                 <ChevronDown
                   size={18}
-                  className={`text-slate-500 shrink-0 transition-transform duration-300 ${
-                    openIndex === i ? 'rotate-180 text-teal-400' : ''
+                  className={`text-gray-400 shrink-0 transition-transform duration-300 ${
+                    openIndex === i ? 'rotate-180 text-teal-600' : ''
                   }`}
                 />
               </button>
-              <div className={`faq-answer ${openIndex === i ? 'open' : ''}`}>
-                <div>
-                  <p className="px-5 pb-5 text-sm text-slate-400 leading-relaxed">
-                    {faq.a}
-                  </p>
-                </div>
+              <div className={`overflow-hidden transition-all duration-300 ${openIndex === i ? 'max-h-96' : 'max-h-0'}`}>
+                <p className="px-5 pb-5 text-sm text-gray-600 leading-relaxed">
+                  {faq.a}
+                </p>
               </div>
             </motion.div>
           ))}
@@ -726,34 +692,29 @@ function FAQSection() {
 function CTASection() {
   const { session } = useAuth();
   return (
-    <section className="py-24 sm:py-32 relative">
+    <section className="py-24 sm:py-32 bg-white relative">
       <div className="max-w-4xl mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="glass-card rounded-3xl p-12 sm:p-16 text-center relative overflow-hidden"
+          className="bg-gray-900 rounded-3xl p-12 sm:p-16 text-center relative overflow-hidden shadow-2xl"
         >
-          {/* Background Glow */}
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-[200px] bg-teal-500/10 rounded-full blur-[80px]" />
-          </div>
-
-          <div className="relative z-10">
-            <div className="w-16 h-16 bg-gradient-to-br from-teal-400 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-8 glow-teal-strong animate-pulse-glow">
+          <div className="relative z-10 text-white">
+            <div className="w-16 h-16 bg-gradient-to-br from-teal-400 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-lg shadow-teal-500/20">
               <ShieldCheck size={32} className="text-white" />
             </div>
-            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
               Ready to secure your digital life?
             </h2>
-            <p className="text-slate-400 max-w-lg mx-auto mb-10">
+            <p className="text-gray-400 max-w-lg mx-auto mb-10">
               Join thousands of security-conscious users who trust Vestiga to protect their most sensitive credentials.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               {session ? (
                 <Link
                   to="/dashboard"
-                  className="group inline-flex items-center gap-2 text-base font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-300 hover:to-teal-400 px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
+                  className="group inline-flex items-center gap-2 text-base font-semibold text-gray-900 bg-teal-400 hover:bg-teal-300 px-8 py-3.5 rounded-xl transition-all shadow-lg active:scale-[0.98]"
                 >
                   Go to Dashboard
                   <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
@@ -761,7 +722,7 @@ function CTASection() {
               ) : (
                 <Link
                   to="/signup"
-                  className="group inline-flex items-center gap-2 text-base font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-300 hover:to-teal-400 px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
+                  className="group inline-flex items-center gap-2 text-base font-semibold text-gray-900 bg-teal-400 hover:bg-teal-300 px-8 py-3.5 rounded-xl transition-all shadow-lg active:scale-[0.98]"
                 >
                   Get Started Free
                   <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
@@ -771,7 +732,7 @@ function CTASection() {
                 href="https://github.com/Priyankkhatri/My-Vault"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-base font-medium text-slate-400 hover:text-white px-8 py-3.5 rounded-xl border border-white/10 hover:border-white/20 transition-all hover:bg-white/5"
+                className="inline-flex items-center gap-2 text-base font-medium text-white hover:text-white px-8 py-3.5 rounded-xl border border-white/20 hover:bg-white/10 transition-all"
               >
                 <Github size={18} />
                 View on GitHub
@@ -786,31 +747,31 @@ function CTASection() {
 
 function Footer() {
   return (
-    <footer className="border-t border-white/5 py-12">
+    <footer className="bg-white border-t border-gray-200 py-12">
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
           {/* Brand */}
           <div className="md:col-span-1">
             <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-br from-teal-400 to-teal-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-teal-700 rounded-lg flex items-center justify-center shadow-sm">
                 <ShieldCheck size={18} className="text-white" />
               </div>
-              <span className="text-lg font-bold text-white">Vestiga</span>
+              <span className="text-lg font-bold text-gray-900">Vestiga</span>
             </div>
-            <p className="text-sm text-slate-500 leading-relaxed">
+            <p className="text-sm text-gray-500 leading-relaxed">
               Zero-knowledge, end-to-end encrypted password manager. Your passwords deserve a fortress.
             </p>
           </div>
 
           {/* Product */}
           <div>
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Product</h4>
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Product</h4>
             <ul className="space-y-2.5">
-              <li><a href="#features" className="text-sm text-slate-500 hover:text-white transition-colors">Features</a></li>
-              <li><a href="#security" className="text-sm text-slate-500 hover:text-white transition-colors">Security</a></li>
-              <li><a href="#faq" className="text-sm text-slate-500 hover:text-white transition-colors">FAQ</a></li>
+              <li><a href="#features" className="text-sm text-gray-600 hover:text-teal-600 transition-colors font-medium">Features</a></li>
+              <li><a href="#security" className="text-sm text-gray-600 hover:text-teal-600 transition-colors font-medium">Security</a></li>
+              <li><a href="#faq" className="text-sm text-gray-600 hover:text-teal-600 transition-colors font-medium">FAQ</a></li>
               <li>
-                <a href="https://github.com/Priyankkhatri/My-Vault" target="_blank" rel="noopener noreferrer" className="text-sm text-slate-500 hover:text-white transition-colors inline-flex items-center gap-1">
+                <a href="https://github.com/Priyankkhatri/My-Vault" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-600 hover:text-teal-600 transition-colors font-medium inline-flex items-center gap-1">
                   GitHub <ExternalLink size={11} />
                 </a>
               </li>
@@ -819,36 +780,36 @@ function Footer() {
 
           {/* Legal */}
           <div>
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Legal</h4>
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Legal</h4>
             <ul className="space-y-2.5">
-              <li><Link to="/privacy" className="text-sm text-slate-500 hover:text-white transition-colors">Privacy Policy</Link></li>
-              <li><Link to="/terms" className="text-sm text-slate-500 hover:text-white transition-colors">Terms of Service</Link></li>
+              <li><Link to="/privacy" className="text-sm text-gray-600 hover:text-teal-600 transition-colors font-medium">Privacy Policy</Link></li>
+              <li><Link to="/terms" className="text-sm text-gray-600 hover:text-teal-600 transition-colors font-medium">Terms of Service</Link></li>
             </ul>
           </div>
 
           {/* Contact */}
           <div>
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Support</h4>
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Support</h4>
             <ul className="space-y-2.5">
-              <li><Link to="/contact" className="text-sm text-slate-500 hover:text-white transition-colors">Contact Us</Link></li>
+              <li><Link to="/contact" className="text-sm text-gray-600 hover:text-teal-600 transition-colors font-medium">Contact Us</Link></li>
               <li>
-                <a href="mailto:pktimepass01@gmail.com" className="text-sm text-slate-500 hover:text-white transition-colors inline-flex items-center gap-1.5">
-                  <Mail size={12} /> Email
+                <a href="mailto:pktimepass01@gmail.com" className="text-sm text-gray-600 hover:text-teal-600 transition-colors font-medium inline-flex items-center gap-1.5">
+                  <Mail size={14} /> Email
                 </a>
               </li>
               <li>
-                <a href="https://github.com/Priyankkhatri/My-Vault/issues" target="_blank" rel="noopener noreferrer" className="text-sm text-slate-500 hover:text-white transition-colors inline-flex items-center gap-1.5">
-                  <Github size={12} /> Report a Bug
+                <a href="https://github.com/Priyankkhatri/My-Vault/issues" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-600 hover:text-teal-600 transition-colors font-medium inline-flex items-center gap-1.5">
+                  <Github size={14} /> Report a Bug
                 </a>
               </li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-slate-600">© {new Date().getFullYear()} Vestiga. All rights reserved.</p>
-          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-            <ShieldCheck size={12} className="text-teal-600" />
+        <div className="mt-12 pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs font-medium text-gray-500">© {new Date().getFullYear()} Vestiga. All rights reserved.</p>
+          <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
+            <ShieldCheck size={14} className="text-teal-600" />
             <span>Built with zero-knowledge security</span>
           </div>
         </div>
@@ -861,7 +822,7 @@ function Footer() {
 
 export function LandingPage() {
   return (
-    <div className="bg-[#0A0F1C] min-h-screen">
+    <div className="bg-white min-h-screen text-gray-900 selection:bg-teal-100 selection:text-teal-900">
       <Navbar />
       <HeroSection />
       <TrustTicker />
