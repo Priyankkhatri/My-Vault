@@ -64,13 +64,14 @@ interface AuditLogRow {
 
 // ─── User Operations ────────────────────────────────────────────
 
-export async function createUser(email: string, authHash: string, salt: string, kdfParams: any) {
+export async function createUser(email: string, authHash: string, salt: string, kdfParams: any, id?: string) {
   const query = `
-    INSERT INTO users (email, auth_hash, kdf_salt, kdf_params)
-    VALUES ($1, $2, $3, $4)
+    INSERT INTO users (id, email, auth_hash, kdf_salt, kdf_params)
+    VALUES ($1, $2, $3, $4, $5)
     RETURNING *;
   `;
-  const { rows } = await pool.query(query, [email, authHash, salt, JSON.stringify(kdfParams)]);
+  const userId = id || uuid();
+  const { rows } = await pool.query(query, [userId, email, authHash, salt, JSON.stringify(kdfParams)]);
   return rows[0] as UserRow;
 }
 

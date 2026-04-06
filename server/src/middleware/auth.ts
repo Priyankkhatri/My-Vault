@@ -54,13 +54,11 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
       // but we need the record for items/tiers
       localUser = await db.createUser(
         user.email || '',
-        'supabase_managed', // Placeholders
+        'supabase_managed', 
         'not_applicable',
-        { iterations: 0 }
+        { iterations: 0 },
+        user.id
       );
-      
-      // Force set the ID to match Supabase
-      await db.updateUserTier(user.id, 'free', ''); // This is a hacky way to ensure the record is there if createUser generated a new UUID
       // Actually, my createUser uses uuid_generate_v4(). I should probably fix that.
     }
 

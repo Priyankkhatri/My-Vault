@@ -134,11 +134,11 @@ function loadFromDisk() {
 
 loadFromDisk();
 
-async function memCreateUser(email: string, authHash: string, salt: string, kdfParams: Record<string, unknown>) {
-  const id = uuid();
+async function memCreateUser(email: string, authHash: string, salt: string, kdfParams: Record<string, unknown>, id?: string) {
+  const userId = id || uuid();
   const now = new Date();
-  const user: UserRow = { id, email, auth_hash: authHash, kdf_salt: salt, kdf_params: kdfParams, created_at: now, updated_at: now, tier: 'free' };
-  store.users.set(id, user);
+  const user: UserRow = { id: userId, email, auth_hash: authHash, kdf_salt: salt, kdf_params: kdfParams, created_at: now, updated_at: now, tier: 'free' };
+  store.users.set(userId, user);
   saveToDisk();
   return user;
 }
