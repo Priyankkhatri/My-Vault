@@ -29,7 +29,7 @@ export function Dashboard() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto px-8 py-8 animate-in fade-in duration-300">
+    <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 animate-in fade-in duration-300">
       
       {/* Header */}
       <div className="flex items-end justify-between mb-8">
