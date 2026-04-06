@@ -1,18 +1,55 @@
 /**
- * In-Memory Store
+ * Storage Switcher
  * 
- * Development fallback when PostgreSQL is not available.
- * Provides the same interface as the DB layer but stores everything in RAM.
- * Data is lost on server restart — for development only.
+ * Dynamically switches between:
+ * - PostgreSQL (using pg.ts) if DATABASE_URL is provided.
+ * - In-Memory (legacy dev mode) if no DATABASE_URL is detected.
  */
 
+import { env } from '../config/env.js';
+import * as pg from './pg.js';
 import { v4 as uuid } from 'uuid';
 import fs from 'fs';
 import path from 'path';
 
-const DB_PATH = path.join(process.cwd(), 'dev-db.json');
+// ─── Choice Logic ───────────────────────────────────────────────
 
-// ─── In-Memory Tables ───────────────────────────────────────────
+const usePostgres = !!env.databaseUrl;
+
+if (usePostgres) {
+  console.log('📦 Database: Initializing PostgreSQL (Supabase)');
+} else {
+  console.log('📦 Database: Running in In-Memory mode (Development)');
+}
+
+// ─── Exported API ───────────────────────────────────────────────
+
+export const createUser = usePostgres ? pg.createUser : memCreateUser;
+export const findUserByEmail = usePostgres ? pg.findUserByEmail : memFindUserByEmail;
+export const findUserById = usePostgres ? pg.findUserById : memFindUserById;
+export const updateUserAuth = usePostgres ? pg.updateUserAuth : memUpdateUserAuth;
+export const deleteUser = usePostgres ? pg.deleteUser : memDeleteUser;
+
+export const createVaultItem = usePostgres ? pg.createVaultItem : memCreateVaultItem;
+export const getVaultItems = usePostgres ? pg.getVaultItems : memGetVaultItems;
+export const getVaultItem = usePostgres ? pg.getVaultItem : memGetVaultItem;
+export const updateVaultItem = usePostgres ? pg.updateVaultItem : memUpdateVaultItem;
+export const deleteVaultItem = usePostgres ? pg.deleteVaultItem : memDeleteVaultItem;
+
+export const createDeviceSession = usePostgres ? pg.createDeviceSession : memCreateDeviceSession;
+export const findSessionByRefreshHash = usePostgres ? pg.findSessionByRefreshHash : memFindSessionByRefreshHash;
+export const updateSessionRefreshHash = usePostgres ? pg.updateSessionRefreshHash : memUpdateSessionRefreshHash;
+export const getDeviceSessions = usePostgres ? pg.getDeviceSessions : memGetDeviceSessions;
+export const deleteDeviceSession = usePostgres ? pg.deleteDeviceSession : memDeleteDeviceSession;
+export const deleteOtherDeviceSessions = usePostgres ? pg.deleteOtherDeviceSessions : memDeleteOtherDeviceSessions;
+
+export const createAuditLog = usePostgres ? pg.createAuditLog : memCreateAuditLog;
+export const getAuditLogs = usePostgres ? pg.getAuditLogs : memGetAuditLogs;
+export const getQuotaUsage = usePostgres ? pg.getQuotaUsage : memGetQuotaUsage;
+
+// ─── In-Memory Implementation (LEGACY / DEV ONLY) ─────────────
+
+const DB_PATH = path.join(process.cwd(), 'dev-db.json');
 
 interface UserRow {
   id: string;
@@ -50,8 +87,6 @@ interface DeviceSessionRow {
   created_at: Date;
 }
 
-
-
 interface AuditLogRow {
   id: string;
   user_id: string | null;
@@ -62,8 +97,6 @@ interface AuditLogRow {
   created_at: Date;
 }
 
-// ─── Store Singleton ────────────────────────────────────────────
-
 const store = {
   users: new Map<string, UserRow>(),
   vaultItems: new Map<string, VaultItemRow>(),
@@ -71,9 +104,8 @@ const store = {
   auditLogs: [] as AuditLogRow[],
 };
 
-// ─── Persistence Layer ──────────────────────────────────────────
-
 function saveToDisk() {
+  if (usePostgres) return;
   const data = {
     users: Array.from(store.users.entries()),
     vaultItems: Array.from(store.vaultItems.entries()),
@@ -84,7 +116,7 @@ function saveToDisk() {
 }
 
 function loadFromDisk() {
-  if (!fs.existsSync(DB_PATH)) return;
+  if (usePostgres || !fs.existsSync(DB_PATH)) return;
   try {
     const data = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
     store.users = new Map(data.users);
@@ -96,12 +128,9 @@ function loadFromDisk() {
   }
 }
 
-// Initial load
 loadFromDisk();
 
-// ─── User Operations ────────────────────────────────────────────
-
-export async function createUser(email: string, authHash: string, salt: string, kdfParams: Record<string, unknown>) {
+async function memCreateUser(email: string, authHash: string, salt: string, kdfParams: Record<string, unknown>) {
   const id = uuid();
   const now = new Date();
   const user: UserRow = { id, email, auth_hash: authHash, kdf_salt: salt, kdf_params: kdfParams, created_at: now, updated_at: now };
@@ -110,18 +139,18 @@ export async function createUser(email: string, authHash: string, salt: string, 
   return user;
 }
 
-export async function findUserByEmail(email: string) {
+async function memFindUserByEmail(email: string) {
   for (const user of store.users.values()) {
     if (user.email === email) return user;
   }
   return null;
 }
 
-export async function findUserById(id: string) {
+async function memFindUserById(id: string) {
   return store.users.get(id) || null;
 }
 
-export async function updateUserAuth(userId: string, authHash: string, kdfSalt: string, kdfParams: Record<string, unknown>) {
+async function memUpdateUserAuth(userId: string, authHash: string, kdfSalt: string, kdfParams: Record<string, unknown>) {
   const user = store.users.get(userId);
   if (user) {
     user.auth_hash = authHash;
@@ -134,14 +163,12 @@ export async function updateUserAuth(userId: string, authHash: string, kdfSalt: 
   return false;
 }
 
-export async function deleteUser(userId: string) {
+async function memDeleteUser(userId: string) {
   if (store.users.has(userId)) {
     store.users.delete(userId);
-    // Cascade delete vault items
     for (const [itemId, item] of store.vaultItems.entries()) {
       if (item.user_id === userId) store.vaultItems.delete(itemId);
     }
-    // Cascade delete sessions
     for (const [sessionId, session] of store.deviceSessions.entries()) {
       if (session.user_id === userId) store.deviceSessions.delete(sessionId);
     }
@@ -151,9 +178,7 @@ export async function deleteUser(userId: string) {
   return false;
 }
 
-// ─── Vault Item Operations ──────────────────────────────────────
-
-export async function createVaultItem(
+async function memCreateVaultItem(
   userId: string, id: string, title: string, username: string | undefined,
   password: string | undefined, type: string, favorite: boolean, tags: string[], notes: string | undefined
 ) {
@@ -167,7 +192,7 @@ export async function createVaultItem(
   return item;
 }
 
-export async function getVaultItems(userId: string) {
+async function memGetVaultItems(userId: string) {
   const items: VaultItemRow[] = [];
   for (const item of store.vaultItems.values()) {
     if (item.user_id === userId) items.push(item);
@@ -175,13 +200,13 @@ export async function getVaultItems(userId: string) {
   return items;
 }
 
-export async function getVaultItem(userId: string, itemId: string) {
+async function memGetVaultItem(userId: string, itemId: string) {
   const item = store.vaultItems.get(itemId);
   if (item && item.user_id === userId) return item;
   return null;
 }
 
-export async function updateVaultItem(
+async function memUpdateVaultItem(
   userId: string, itemId: string, title: string, username: string | undefined,
   password: string | undefined, type: string, favorite: boolean, tags: string[], notes: string | undefined, expectedVersion: number
 ) {
@@ -202,7 +227,7 @@ export async function updateVaultItem(
   return item;
 }
 
-export async function deleteVaultItem(userId: string, itemId: string) {
+async function memDeleteVaultItem(userId: string, itemId: string) {
   const item = store.vaultItems.get(itemId);
   if (item && item.user_id === userId) {
     store.vaultItems.delete(itemId);
@@ -212,9 +237,7 @@ export async function deleteVaultItem(userId: string, itemId: string) {
   return false;
 }
 
-// ─── Device Session Operations ──────────────────────────────────
-
-export async function createDeviceSession(
+async function memCreateDeviceSession(
   userId: string, deviceName: string, ipAddress: string,
   userAgent: string, refreshTokenHash: string
 ) {
@@ -229,14 +252,14 @@ export async function createDeviceSession(
   return session;
 }
 
-export async function findSessionByRefreshHash(hash: string) {
+async function memFindSessionByRefreshHash(hash: string) {
   for (const session of store.deviceSessions.values()) {
     if (session.refresh_token_hash === hash) return session;
   }
   return null;
 }
 
-export async function updateSessionRefreshHash(sessionId: string, newHash: string) {
+async function memUpdateSessionRefreshHash(sessionId: string, newHash: string) {
   const session = store.deviceSessions.get(sessionId);
   if (session) {
     session.refresh_token_hash = newHash;
@@ -245,7 +268,7 @@ export async function updateSessionRefreshHash(sessionId: string, newHash: strin
   }
 }
 
-export async function getDeviceSessions(userId: string) {
+async function memGetDeviceSessions(userId: string) {
   const sessions: DeviceSessionRow[] = [];
   for (const session of store.deviceSessions.values()) {
     if (session.user_id === userId) sessions.push(session);
@@ -253,7 +276,7 @@ export async function getDeviceSessions(userId: string) {
   return sessions;
 }
 
-export async function deleteDeviceSession(userId: string, sessionId: string) {
+async function memDeleteDeviceSession(userId: string, sessionId: string) {
   const session = store.deviceSessions.get(sessionId);
   if (session && session.user_id === userId) {
     store.deviceSessions.delete(sessionId);
@@ -263,7 +286,7 @@ export async function deleteDeviceSession(userId: string, sessionId: string) {
   return false;
 }
 
-export async function deleteOtherDeviceSessions(userId: string, currentSessionId: string) {
+async function memDeleteOtherDeviceSessions(userId: string, currentSessionId: string) {
   let deletedCount = 0;
   for (const [sessionId, session] of store.deviceSessions.entries()) {
     if (session.user_id === userId && sessionId !== currentSessionId) {
@@ -275,11 +298,7 @@ export async function deleteOtherDeviceSessions(userId: string, currentSessionId
   return deletedCount;
 }
 
-
-
-// ─── Audit Log Operations ───────────────────────────────────────
-
-export async function createAuditLog(
+async function memCreateAuditLog(
   userId: string | null, eventType: string, metadata: Record<string, unknown>,
   ipAddress: string, userAgent: string
 ) {
@@ -292,14 +311,14 @@ export async function createAuditLog(
   return log;
 }
 
-export async function getAuditLogs(userId: string, limit = 50) {
+async function memGetAuditLogs(userId: string, limit = 50) {
   return store.auditLogs
     .filter(l => l.user_id === userId)
     .sort((a, b) => b.created_at.getTime() - a.created_at.getTime())
     .slice(0, limit);
 }
 
-export async function getQuotaUsage(userId: string, feature: string) {
+export async function memGetQuotaUsage(userId: string, _feature: string) {
   // Mock implementation for development.
   // In production, this would query a usages table.
   return 0;

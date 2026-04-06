@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import {
   ShieldCheck, Lock, Fingerprint, Zap, Globe, Brain,
   ChevronDown, ArrowRight, CheckCircle2, Eye, EyeOff,
   KeyRound, Sparkles, Shield, Mail, Github, Twitter,
-  Menu, X, ExternalLink
+  Menu, X, ExternalLink, User as UserIcon, LogOut, Settings as SettingsIcon
 } from 'lucide-react';
-
+import { useAuth } from '../context/AuthContext';
 // ─── Data ────────────────────────────────────────────────────────
 
 const FEATURES = [
@@ -113,6 +113,15 @@ const TRUST_TICKER = [
 function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const { session, user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    setDropdownOpen(false);
+    navigate('/');
+  };
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
@@ -156,19 +165,68 @@ function Navbar() {
         </div>
 
         {/* Desktop CTAs */}
-        <div className="hidden md:flex items-center gap-3">
-          <Link
-            to="/login"
-            className="text-sm font-medium text-slate-300 hover:text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            Login
-          </Link>
-          <Link
-            to="/signup"
-            className="text-sm font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-300 hover:to-teal-400 px-5 py-2 rounded-lg transition-all shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-px active:scale-[0.98]"
-          >
-            Get Started Free
-          </Link>
+        <div className="hidden md:flex items-center gap-3 relative">
+          {session ? (
+            <>
+              <button
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="flex items-center gap-2 text-sm font-semibold text-white bg-white/5 border border-white/10 hover:bg-white/10 px-4 py-2 rounded-lg transition-all"
+              >
+                <div className="w-5 h-5 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center">
+                  <UserIcon size={12} className="text-white" />
+                </div>
+                <span>{user?.email?.split('@')[0] || 'Account'}</span>
+                <ChevronDown size={14} className={`transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Dropdown */}
+              {dropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="absolute top-12 right-0 w-48 bg-[#0F172A] border border-white/10 rounded-xl shadow-xl shadow-black/50 py-1 overflow-hidden"
+                >
+                  <Link
+                    to="/dashboard"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+                  >
+                    <ShieldCheck size={16} className="text-teal-400" />
+                    Dashboard
+                  </Link>
+                  <Link
+                    to="/settings"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+                  >
+                    <SettingsIcon size={16} />
+                    Settings
+                  </Link>
+                  <div className="h-px bg-white/10 my-1 font-mono" />
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-400/10 transition-colors text-left"
+                  >
+                    <LogOut size={16} />
+                    Log Out
+                  </button>
+                </motion.div>
+              )}
+            </>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                className="text-sm font-medium text-slate-300 hover:text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Login
+              </Link>
+              <Link
+                to="/signup"
+                className="text-sm font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-300 hover:to-teal-400 px-5 py-2 rounded-lg transition-all shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-px active:scale-[0.98]"
+              >
+                Get Started Free
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -199,12 +257,31 @@ function Navbar() {
             </a>
           ))}
           <div className="pt-4 border-t border-white/10 space-y-3">
-            <Link to="/login" className="block text-center text-sm font-medium text-slate-300 py-2.5 rounded-lg border border-white/10">
-              Login
-            </Link>
-            <Link to="/signup" className="block text-center text-sm font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 py-2.5 rounded-lg">
-              Get Started Free
-            </Link>
+            {session ? (
+              <>
+                <div className="px-2 pb-2 mb-2 border-b border-white/5 text-sm font-medium text-slate-400">
+                  {user?.email}
+                </div>
+                <Link to="/dashboard" className="block text-center text-sm font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 py-2.5 rounded-lg mb-2">
+                  Dashboard
+                </Link>
+                <Link to="/settings" className="block text-center text-sm font-medium text-slate-300 py-2.5 rounded-lg border border-white/10 mb-2">
+                  Settings
+                </Link>
+                <button onClick={handleLogout} className="w-full block text-center text-sm font-medium text-red-400 py-2.5 rounded-lg border border-red-400/20 bg-red-400/5">
+                  Log Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="block text-center text-sm font-medium text-slate-300 py-2.5 rounded-lg border border-white/10">
+                  Login
+                </Link>
+                <Link to="/signup" className="block text-center text-sm font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 py-2.5 rounded-lg">
+                  Get Started Free
+                </Link>
+              </>
+            )}
           </div>
         </motion.div>
       )}
@@ -216,6 +293,7 @@ function HeroSection() {
   const { scrollYProgress } = useScroll();
   const y = useTransform(scrollYProgress, [0, 0.3], [0, -60]);
   const opacity = useTransform(scrollYProgress, [0, 0.25], [1, 0]);
+  const { session } = useAuth();
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
@@ -279,13 +357,23 @@ function HeroSection() {
           transition={{ delay: 0.5 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-4"
         >
-          <Link
-            to="/signup"
-            className="group inline-flex items-center gap-2 text-base font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-300 hover:to-teal-400 px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
-          >
-            Get Started Free
-            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
+          {session ? (
+            <Link
+              to="/dashboard"
+              className="group inline-flex items-center gap-2 text-base font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-300 hover:to-teal-400 px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
+            >
+              Go to Dashboard
+              <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
+          ) : (
+            <Link
+              to="/signup"
+              className="group inline-flex items-center gap-2 text-base font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-300 hover:to-teal-400 px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
+            >
+              Get Started Free
+              <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
+          )}
           <a
             href="#features"
             className="inline-flex items-center gap-2 text-base font-medium text-slate-400 hover:text-white px-8 py-3.5 rounded-xl border border-white/10 hover:border-white/20 transition-all hover:bg-white/5"
@@ -507,6 +595,7 @@ function SecuritySection() {
 }
 
 function HowItWorks() {
+  const { session } = useAuth();
   return (
     <section id="how-it-works" className="py-24 sm:py-32 relative">
       <div className="max-w-5xl mx-auto px-6">
@@ -556,13 +645,23 @@ function HowItWorks() {
           viewport={{ once: true }}
           className="text-center mt-16"
         >
-          <Link
-            to="/signup"
-            className="group inline-flex items-center gap-2 text-base font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-300 hover:to-teal-400 px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
-          >
-            Create Your Vault
-            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
+          {session ? (
+            <Link
+              to="/dashboard"
+              className="group inline-flex items-center gap-2 text-base font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-300 hover:to-teal-400 px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
+            >
+              Go to Dashboard
+              <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
+          ) : (
+            <Link
+              to="/signup"
+              className="group inline-flex items-center gap-2 text-base font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-300 hover:to-teal-400 px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
+            >
+              Create Your Vault
+              <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
+          )}
         </motion.div>
       </div>
     </section>
@@ -625,6 +724,7 @@ function FAQSection() {
 }
 
 function CTASection() {
+  const { session } = useAuth();
   return (
     <section className="py-24 sm:py-32 relative">
       <div className="max-w-4xl mx-auto px-6">
@@ -650,13 +750,23 @@ function CTASection() {
               Join thousands of security-conscious users who trust Vestiga to protect their most sensitive credentials.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link
-                to="/signup"
-                className="group inline-flex items-center gap-2 text-base font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-300 hover:to-teal-400 px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
-              >
-                Get Started Free
-                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
+              {session ? (
+                <Link
+                  to="/dashboard"
+                  className="group inline-flex items-center gap-2 text-base font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-300 hover:to-teal-400 px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
+                >
+                  Go to Dashboard
+                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                </Link>
+              ) : (
+                <Link
+                  to="/signup"
+                  className="group inline-flex items-center gap-2 text-base font-semibold text-slate-900 bg-gradient-to-r from-teal-400 to-teal-500 hover:from-teal-300 hover:to-teal-400 px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-0.5 active:scale-[0.98]"
+                >
+                  Get Started Free
+                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                </Link>
+              )}
               <a
                 href="https://github.com/Priyankkhatri/My-Vault"
                 target="_blank"

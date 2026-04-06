@@ -75,7 +75,7 @@ function AppRoutes() {
       <Suspense fallback={<LoadingScreen />}>
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={session ? <Navigate to="/dashboard" replace /> : <LandingPage />} />
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={!session ? <Login /> : <Navigate to="/dashboard" replace />} />
           <Route path="/signup" element={!session ? <Signup /> : <Navigate to="/dashboard" replace />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
