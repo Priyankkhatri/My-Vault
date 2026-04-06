@@ -88,6 +88,13 @@ app.get('/api/health', (_req, res) => {
       version: '1.0.0',
       timestamp: new Date().toISOString(),
       ai: env.groqApiKey ? 'configured' : 'not configured',
+      supabase: env.supabaseUrl ? 'configured' : 'MISSING',
+      supabaseKey: env.supabaseAnonKey ? 'configured' : 'MISSING',
+      razorpay: env.razorpayKeyId ? 'configured' : 'MISSING',
+      razorpayPlan: env.razorpayPlanId ? 'configured' : 'MISSING',
+      cors: env.corsOrigin,
+      db: env.databaseUrl ? 'PostgreSQL' : 'in-memory',
+      nodeEnv: process.env.NODE_ENV || 'not set',
     },
   });
 });
