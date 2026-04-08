@@ -17,7 +17,6 @@ function sendTabMessage(tabId, message) {
     });
   });
 }
-
 function queryTabs(queryInfo) {
   return new Promise(function (resolve) {
     chrome.tabs.query(queryInfo, resolve);
@@ -25,7 +24,7 @@ function queryTabs(queryInfo) {
 }
 
 function getConfiguredWebAppOrigin() {
-  var fallbackUrl = "https://vestiga.vercel.app";
+  var fallbackUrl = "https://vestiga.vercel.app"; 
   var rawUrl = fallbackUrl;
 
   if (typeof CONFIG !== "undefined") {

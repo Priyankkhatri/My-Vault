@@ -18,6 +18,14 @@ interface RequestOptions {
   signal?: AbortSignal;
 }
 
+async function getAccessToken(forceRefresh = false): Promise<string | null> {
+  const authResult = forceRefresh
+    ? await supabase.auth.refreshSession()
+    : await supabase.auth.getSession();
+
+  return authResult.data.session?.access_token ?? null;
+}
+
 async function request<T>(
   method: string,
   path: string,
@@ -30,21 +38,24 @@ async function request<T>(
   };
 
   if (!options?.skipAuth) {
-    // Get fresh Supabase access token
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.access_token) {
-      headers['Authorization'] = `Bearer ${session.access_token}`;
+    const accessToken = await getAccessToken();
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
     }
   }
 
-  let res: Response;
-  try {
-    res = await fetch(url, {
+  const performFetch = async (requestHeaders: Record<string, string>) => {
+    return fetch(url, {
       method,
-      headers,
+      headers: requestHeaders,
       body: body ? JSON.stringify(body) : undefined,
       signal: options?.signal,
     });
+  };
+
+  let res: Response;
+  try {
+    res = await performFetch(headers);
   } catch (err: any) {
     if (err.name === 'AbortError') {
 
@@ -52,8 +63,22 @@ async function request<T>(
     return { success: false, error: err.message || 'Network error' };
   }
 
-  // Supabase SDK automatically handles token refresh in the background.
-  // If we receive a 401 from our backend here, we assume the token is completely invalid.
+  if (res.status === 401 && !options?.skipAuth) {
+    const refreshedToken = await getAccessToken(true);
+    if (refreshedToken) {
+      const retryHeaders = {
+        ...headers,
+        Authorization: `Bearer ${refreshedToken}`,
+      };
+
+      try {
+        res = await performFetch(retryHeaders);
+      } catch (err: any) {
+        return { success: false, error: err.message || 'Network error' };
+      }
+    }
+  }
+
   if (res.status === 401 && !options?.skipAuth) {
     await supabase.auth.signOut();
     return { success: false, error: 'Session expired. Please log in again.', status: 401 };

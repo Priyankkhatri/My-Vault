@@ -10,8 +10,12 @@ export const env = {
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:5177',
   isProduction: process.env.NODE_ENV === 'production',
   // Supabase Configuration
-  supabaseUrl: process.env.VITE_SUPABASE_URL || '', // TODO: Replace with actual key in .env before deployment
-  supabaseAnonKey: process.env.VITE_SUPABASE_ANON_KEY || '', // TODO: Replace with actual key in .env before deployment
+  supabaseUrl: process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '', // Supports both server and Vite env naming
+  supabaseAnonKey:
+    process.env.SUPABASE_ANON_KEY
+    || process.env.SUPABASE_PUBLISHABLE_KEY
+    || process.env.VITE_SUPABASE_ANON_KEY
+    || '', // Supports both server and Vite env naming
   // Razorpay Configuration
   razorpayKeyId: process.env.RAZORPAY_KEY_ID || '',
   razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET || '',
