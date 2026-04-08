@@ -12,6 +12,119 @@
 
   /** Tracks forms we've already processed so we don't double-bind. */
   const processedForms = new WeakSet();
+  const WEBAPP_SOURCE = "vestiga-webapp";
+  const EXTENSION_SOURCE = "vestiga-extension";
+  const WEBAPP_AUTH_REQUEST = "VESTIGA_AUTH_SESSION_REQUEST";
+  const WEBAPP_AUTH_RESPONSE = "VESTIGA_AUTH_SESSION_RESPONSE";
+  const WEBAPP_AUTH_CHANGED = "VESTIGA_AUTH_SESSION_CHANGED";
+
+  function isSessionPayload(value) {
+    return Boolean(
+      value &&
+      typeof value === "object" &&
+      typeof value.access_token === "string" &&
+      typeof value.refresh_token === "string" &&
+      typeof value.expires_at === "number" &&
+      value.user &&
+      typeof value.user.id === "string"
+    );
+  }
+
+  function sendRuntimeMessage(message) {
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(message, (response) => {
+        if (chrome.runtime.lastError) {
+          return reject(new Error(chrome.runtime.lastError.message));
+        }
+        resolve(response);
+      });
+    });
+  }
+
+  function createRequestId() {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  function requestSessionFromWebApp() {
+    if (!/^https?:$/.test(window.location.protocol)) {
+      return Promise.resolve(null);
+    }
+
+    return new Promise((resolve) => {
+      const requestId = createRequestId();
+      let settled = false;
+
+      const cleanup = () => {
+        settled = true;
+        clearTimeout(timeoutId);
+        window.removeEventListener("message", handleMessage);
+      };
+
+      const finish = (session) => {
+        if (settled) return;
+        cleanup();
+        resolve(session);
+      };
+
+      const handleMessage = (event) => {
+        if (event.source !== window) return;
+
+        const data = event.data;
+        if (
+          !data ||
+          data.source !== WEBAPP_SOURCE ||
+          data.type !== WEBAPP_AUTH_RESPONSE ||
+          data.requestId !== requestId
+        ) {
+          return;
+        }
+
+        finish(isSessionPayload(data.session) ? data.session : null);
+      };
+
+      const timeoutId = setTimeout(() => finish(null), 1500);
+
+      window.addEventListener("message", handleMessage);
+      window.postMessage(
+        {
+          source: EXTENSION_SOURCE,
+          type: WEBAPP_AUTH_REQUEST,
+          requestId
+        },
+        window.location.origin
+      );
+    });
+  }
+
+  async function importWebAppSession(session) {
+    if (!isSessionPayload(session)) {
+      return { success: false, error: "Invalid session payload" };
+    }
+
+    return sendRuntimeMessage({
+      type: "AUTH",
+      action: "importSession",
+      payload: { session }
+    });
+  }
+
+  window.addEventListener("message", (event) => {
+    if (event.source !== window) return;
+
+    const data = event.data;
+    if (
+      !data ||
+      data.source !== WEBAPP_SOURCE ||
+      data.type !== WEBAPP_AUTH_CHANGED ||
+      !isSessionPayload(data.session)
+    ) {
+      return;
+    }
+
+    importWebAppSession(data.session).catch((error) => {
+      console.warn("[Vestiga] Failed to import web app session:", error);
+    });
+  });
 
   /**
    * Scans the page for login forms and wires up autofill + save logic.
@@ -92,23 +205,39 @@
 
   // --- Listen for AUTOFILL_CREDENTIALS from popup → background → here ---
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message && message.type === "AUTH_SYNC_REQUEST") {
+      requestSessionFromWebApp()
+        .then((session) => {
+          if (!session) {
+            sendResponse({ success: false, error: "No web app session found" });
+            return null;
+          }
+
+          return importWebAppSession(session).then((result) => {
+            sendResponse(result);
+            return null;
+          });
+        })
+        .catch((error) => {
+          sendResponse({ success: false, error: error.message || "Session sync failed" });
+        });
+
+      return true;
+    }
+
     if (message && message.type === "AUTOFILL_CREDENTIALS" && message.credentials) {
-
-
       const credentials = message.credentials;
       const detectedForms = window.MyVaultFormDetector.detectForms();
 
       if (detectedForms.length > 0) {
-        // Fill the first detected form
         window.MyVaultAutofill.fill(credentials, detectedForms[0]);
-
         sendResponse({ success: true });
       } else {
         console.warn("[Vestiga] No login forms detected on this page.");
         sendResponse({ success: false, error: "No login forms found" });
       }
 
-      return true; // async response
+      return true;
     }
   });
 

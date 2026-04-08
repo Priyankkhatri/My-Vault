@@ -38,6 +38,44 @@ var authService = {
   },
 
   /**
+   * Import an already-authenticated session from the web app.
+   */
+  async importSession(session) {
+    var normalized = this._normalizeSession(session);
+    if (!normalized) {
+      return { success: false, error: "Invalid session payload" };
+    }
+
+    var existingSession = await this.getSession();
+    if (existingSession && existingSession.user.id !== normalized.user.id) {
+      _masterKey = null;
+      if (typeof self !== "undefined" && self.syncManager) {
+        self.syncManager.clearCache();
+      }
+    }
+
+    var verified = await this._verifySession(normalized.access_token);
+    if (!verified.success) {
+      if (this._isExpired(normalized)) {
+        var refreshed = await this._refreshToken(normalized.refresh_token);
+        if (refreshed) {
+          return { success: true, user: refreshed.user };
+        }
+      }
+
+      return { success: false, error: verified.error || "Session verification failed" };
+    }
+
+    normalized.user = {
+      id: verified.user.id,
+      email: verified.user.email || normalized.user.email || null
+    };
+
+    await this._saveSession(normalized);
+    return { success: true, user: normalized.user };
+  },
+
+  /**
    * Sign out — clears all session data AND master key.
    */
   async signOut() {
@@ -49,6 +87,10 @@ var authService = {
       });
     } catch (_) {
       await self.storageService.remove(SESSION_STORAGE_KEY);
+    }
+
+    if (typeof self !== "undefined" && self.syncManager) {
+      self.syncManager.clearCache();
     }
   },
 
@@ -161,10 +203,58 @@ var authService = {
     }
   },
 
+  _normalizeSession(session) {
+    if (!session || typeof session !== "object") return null;
+
+    var accessToken = typeof session.access_token === "string" ? session.access_token : "";
+    var refreshToken = typeof session.refresh_token === "string" ? session.refresh_token : "";
+    var expiresAt = Number(session.expires_at);
+    var userId = session.user && typeof session.user.id === "string" ? session.user.id : "";
+    var email = session.user && typeof session.user.email === "string"
+      ? session.user.email
+      : null;
+
+    if (!accessToken || !refreshToken || !userId || !Number.isFinite(expiresAt)) {
+      return null;
+    }
+
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_at: Math.floor(expiresAt),
+      user: {
+        id: userId,
+        email: email
+      }
+    };
+  },
+
   _isExpired(session) {
     if (!session || !session.expires_at) return true;
     var now = Math.floor(Date.now() / 1000);
     return now >= (session.expires_at - 30);
+  },
+
+  async _verifySession(accessToken) {
+    if (!accessToken) {
+      return { success: false, error: "Missing access token" };
+    }
+
+    var result = await self.supabaseRequest("GET", "/auth/v1/user", null, accessToken);
+    if (result.error || !result.data || !result.data.id) {
+      return {
+        success: false,
+        error: result.error || "Session verification failed"
+      };
+    }
+
+    return {
+      success: true,
+      user: {
+        id: result.data.id,
+        email: result.data.email || null
+      }
+    };
   },
 
   async _refreshToken(refreshToken) {

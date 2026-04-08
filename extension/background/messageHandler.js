@@ -7,6 +7,45 @@
 var _failedAttempts = 0;
 var _lockoutTime = 0;
 
+function sendTabMessage(tabId, message) {
+  return new Promise(function (resolve, reject) {
+    chrome.tabs.sendMessage(tabId, message, function (response) {
+      if (chrome.runtime.lastError) {
+        return reject(new Error(chrome.runtime.lastError.message));
+      }
+      resolve(response);
+    });
+  });
+}
+
+function queryTabs(queryInfo) {
+  return new Promise(function (resolve) {
+    chrome.tabs.query(queryInfo, resolve);
+  });
+}
+
+async function syncSessionFromTabs() {
+  var tabs = await queryTabs({});
+
+  for (var i = 0; i < tabs.length; i++) {
+    var tab = tabs[i];
+    if (!tab || !tab.id || !tab.url || !/^https?:/i.test(tab.url)) {
+      continue;
+    }
+
+    try {
+      var result = await sendTabMessage(tab.id, { type: "AUTH_SYNC_REQUEST" });
+      if (result && result.success && result.data) {
+        return result;
+      }
+    } catch (_) {
+      // Ignore tabs without the content script or without a web app session.
+    }
+  }
+
+  return { success: false, error: "No signed-in Vestiga web app tab found" };
+}
+
 var handleMessage = async function (request) {
   try {
     if (!request || !request.type || !request.action) {
@@ -35,6 +74,16 @@ var handleMessage = async function (request) {
           return { success: true, data: null };
         }
 
+        case "importSession": {
+          var imported = await self.authService.importSession(payload && payload.session);
+          if (imported.success) {
+            self.alarmManager.startAutoLockTimer();
+          }
+          return imported.success
+            ? { success: true, data: imported.user }
+            : { success: false, error: imported.error };
+        }
+
         case "getSession": {
           var session = await self.authService.getSession();
           if (session) {
@@ -42,6 +91,9 @@ var handleMessage = async function (request) {
           }
           return { success: false, error: "No active session" };
         }
+
+        case "syncFromTabs":
+          return await syncSessionFromTabs();
 
         default:
           throw new Error("Unknown AUTH action: " + action);

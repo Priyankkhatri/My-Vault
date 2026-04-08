@@ -106,6 +106,21 @@
 
   // ─── Auth Flow ───
 
+  async function syncSessionFromWebApp() {
+    try {
+      var res = await sendMessage({ type: "AUTH", action: "syncFromTabs" });
+      if (res && res.success && res.data) {
+        currentUser = res.data;
+        await checkMasterKeyStatus();
+        return true;
+      }
+    } catch (err) {
+      console.error("[Popup] Web app session sync failed:", err);
+    }
+
+    return false;
+  }
+
   async function checkAuthStatus() {
     try {
       var res = await sendMessage({ type: "AUTH", action: "getSession" });
@@ -118,6 +133,12 @@
     } catch (err) {
       console.error("[Popup] Session check failed:", err);
     }
+
+    var synced = await syncSessionFromWebApp();
+    if (synced) {
+      return;
+    }
+
     showLoginScreen();
   }
 

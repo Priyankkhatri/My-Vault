@@ -1,6 +1,10 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import {
+  broadcastSessionToExtension,
+  registerExtensionAuthBridge,
+} from '../lib/extensionAuthBridge';
 import { ShieldCheck, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -84,6 +88,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => registerExtensionAuthBridge(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session ?? null;
+  }), []);
+
+  useEffect(() => {
+    broadcastSessionToExtension(session);
+  }, [session]);
 
   const signOut = async () => {
     try {
