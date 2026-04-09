@@ -53,6 +53,7 @@ body {
   height: 20px;
   object-fit: contain;
   display: block;
+  border-radius: 24%;
 }
 
 .brand-name {
@@ -155,6 +156,7 @@ body {
   height: 42px;
   object-fit: contain;
   display: block;
+  border-radius: 24%;
 }
 
 .login-title {

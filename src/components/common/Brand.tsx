@@ -23,12 +23,12 @@ export function BrandMark({
   imageClassName,
 }: BrandMarkProps) {
   return (
-    <div className={cx('shrink-0 overflow-hidden', className)}>
+    <div className={cx('shrink-0 overflow-hidden rounded-[24%]', className)}>
       <img
         src="/brand-logo.png"
         alt={decorative ? '' : alt}
         aria-hidden={decorative || undefined}
-        className={cx('h-full w-full object-contain', imageClassName)}
+        className={cx('h-full w-full object-contain rounded-[24%]', imageClassName)}
       />
     </div>
   );
