@@ -310,7 +310,7 @@ function HeroSection() {
           className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-teal-200 bg-teal-50 mb-8"
         >
           <span className="w-2 h-2 bg-teal-500 rounded-full animate-pulse" />
-          <span className="text-xs font-bold text-teal-700 uppercase tracking-wider">Join 10,000+ Secure Users</span>
+          <span className="text-xs font-bold text-teal-800 uppercase tracking-wider">Join 10,000+ Secure Users</span>
         </motion.div>
 
         {/* Headline */}
@@ -403,8 +403,8 @@ function TrustTicker() {
     <section className="relative py-8 bg-gray-50 border-y border-gray-200 overflow-hidden">
       <div className="animate-ticker flex items-center gap-12 whitespace-nowrap">
         {[...TRUST_TICKER, ...TRUST_TICKER].map((item, i) => (
-          <div key={i} className="flex items-center gap-3 text-sm font-semibold text-gray-500">
-            <CheckCircle2 size={16} className="text-teal-500 shrink-0" />
+          <div key={i} className="flex items-center gap-3 text-sm font-semibold text-gray-600">
+            <CheckCircle2 size={16} className="text-teal-600 shrink-0" />
             <span>{item}</span>
           </div>
         ))}
@@ -426,9 +426,9 @@ function FeaturesSection() {
           <span className="text-xs font-bold text-teal-600 uppercase tracking-[0.2em] mb-3 block">Features</span>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
             Everything you need.{' '}
-            <span className="text-gray-400">Nothing you don't.</span>
+            <span className="text-gray-500">Nothing you don't.</span>
           </h2>
-          <p className="text-gray-500 max-w-xl mx-auto">
+          <p className="text-gray-600 max-w-xl mx-auto">
             A lean, fast, and fiercely secure password manager built for people who care about their digital safety.
           </p>
         </motion.div>
@@ -447,12 +447,12 @@ function FeaturesSection() {
                 <div className="w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center group-hover:bg-teal-100 transition-colors">
                   <feature.icon size={24} className="text-teal-600" />
                 </div>
-                <span className="text-[10px] font-bold text-teal-700 uppercase tracking-widest bg-teal-50 px-2.5 py-1 rounded-full border border-teal-100">
+                <span className="text-[10px] font-bold text-teal-800 uppercase tracking-widest bg-teal-50 px-2.5 py-1 rounded-full border border-teal-100">
                   {feature.badge}
                 </span>
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">{feature.title}</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">{feature.description}</p>
+              <p className="text-sm text-gray-600 leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}
         </div>
@@ -543,16 +543,16 @@ function SecuritySection() {
           viewport={{ once: true }}
           className="mt-12 max-w-4xl mx-auto bg-white border border-gray-200 rounded-2xl p-8 shadow-sm text-center"
         >
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-[0.15em] mb-6">Encryption Flow</p>
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-[0.15em] mb-6">Encryption Flow</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 text-sm">
             {[
               { label: 'Your Password', color: 'text-gray-900', bg: 'bg-gray-100' },
-              { label: '→', color: 'text-gray-300', bg: 'transparent' },
-              { label: 'PBKDF2 Key Derivation', color: 'text-yellow-700', bg: 'bg-yellow-50' },
-              { label: '→', color: 'text-gray-300', bg: 'transparent' },
-              { label: 'AES-256-GCM', color: 'text-teal-700', bg: 'bg-teal-50' },
-              { label: '→', color: 'text-gray-300', bg: 'transparent' },
-              { label: 'Encrypted Blob', color: 'text-gray-500', bg: 'bg-gray-50 border border-gray-200' },
+              { label: '→', color: 'text-gray-400', bg: 'transparent' },
+              { label: 'PBKDF2 Key Derivation', color: 'text-yellow-800', bg: 'bg-yellow-50' },
+              { label: '→', color: 'text-gray-400', bg: 'transparent' },
+              { label: 'AES-256-GCM', color: 'text-teal-800', bg: 'bg-teal-50' },
+              { label: '→', color: 'text-gray-400', bg: 'transparent' },
+              { label: 'Encrypted Blob', color: 'text-gray-600', bg: 'bg-gray-50 border border-gray-200' },
             ].map((step, i) => (
               <span key={i} className={`font-mono font-medium px-3 py-1 rounded-lg ${step.color} ${step.bg}`}>
                 {step.label}
@@ -604,7 +604,7 @@ function HowItWorks() {
                 </span>
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">{step.title}</h3>
-              <p className="text-sm text-gray-500 leading-relaxed max-w-xs mx-auto">{step.description}</p>
+              <p className="text-sm text-gray-600 leading-relaxed max-w-xs mx-auto">{step.description}</p>
             </motion.div>
           ))}
         </div>
@@ -745,10 +745,10 @@ function PricingSection() {
           {/* Pro Tier */}
           <div className="flex-1 bg-white border-2 border-teal-500 rounded-3xl p-8 shadow-xl shadow-teal-900/5 flex flex-col relative transform md:-translate-y-4">
             <div className="absolute -top-4 inset-x-0 flex justify-center">
-              <span className="bg-teal-500 text-white text-xs font-bold uppercase tracking-wider py-1 px-3 rounded-full">Most Popular</span>
+              <span className="bg-teal-600 text-white text-xs font-bold uppercase tracking-wider py-1 px-3 rounded-full">Most Popular</span>
             </div>
             <h3 className="text-2xl font-bold text-gray-900 mb-2">Vestiga Pro</h3>
-            <p className="text-gray-500 text-sm mb-6">For power users who need complete security across all devices.</p>
+            <p className="text-gray-600 text-sm mb-6">For power users who need complete security across all devices.</p>
             <div className="text-4xl font-black text-gray-900 mb-6">$3<span className="text-lg font-medium text-gray-500">/mo</span></div>
             <ul className="space-y-4 mb-8 flex-1">
               <li className="flex items-center gap-3 text-sm text-gray-900 font-semibold">
@@ -859,7 +859,7 @@ function CTASection() {
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
               Ready to secure your digital life?
             </h2>
-            <p className="text-gray-400 max-w-lg mx-auto mb-10">
+            <p className="text-gray-300 max-w-lg mx-auto mb-10">
               Join thousands of security-conscious users who trust Vestiga to protect their most sensitive credentials.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -909,14 +909,14 @@ function Footer() {
               markClassName="h-8 w-8"
               textClassName="text-lg font-bold text-gray-900"
             />
-            <p className="text-sm text-gray-500 leading-relaxed">
+            <p className="text-sm text-gray-600 leading-relaxed">
               Zero-knowledge, end-to-end encrypted password manager. Your passwords deserve a fortress.
             </p>
           </div>
 
           {/* Product */}
           <div>
-            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Product</h4>
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Product</h3>
             <ul className="space-y-2.5">
               <li><a href="#features" className="text-sm text-gray-600 hover:text-teal-600 transition-colors font-medium">Features</a></li>
               <li><a href="#security" className="text-sm text-gray-600 hover:text-teal-600 transition-colors font-medium">Security</a></li>
@@ -931,7 +931,7 @@ function Footer() {
 
           {/* Legal */}
           <div>
-            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Legal</h4>
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Legal</h3>
             <ul className="space-y-2.5">
               <li><Link to="/privacy" className="text-sm text-gray-600 hover:text-teal-600 transition-colors font-medium">Privacy Policy</Link></li>
               <li><Link to="/terms" className="text-sm text-gray-600 hover:text-teal-600 transition-colors font-medium">Terms of Service</Link></li>
@@ -940,7 +940,7 @@ function Footer() {
 
           {/* Contact */}
           <div>
-            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Support</h4>
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Support</h3>
             <ul className="space-y-2.5">
               <li><Link to="/contact" className="text-sm text-gray-600 hover:text-teal-600 transition-colors font-medium">Contact Us</Link></li>
               <li>
@@ -958,8 +958,8 @@ function Footer() {
         </div>
 
         <div className="mt-12 pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs font-medium text-gray-500">© {new Date().getFullYear()} Vestiga. All rights reserved.</p>
-          <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
+          <p className="text-xs font-medium text-gray-600">© {new Date().getFullYear()} Vestiga. All rights reserved.</p>
+          <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
             <ShieldCheck size={14} className="text-teal-600" />
             <span>Built with zero-knowledge security</span>
           </div>
@@ -975,14 +975,16 @@ export function LandingPage() {
   return (
     <div className="bg-white min-h-screen text-gray-900 selection:bg-teal-100 selection:text-teal-900">
       <Navbar />
-      <HeroSection />
-      <TrustTicker />
-      <FeaturesSection />
-      <SecuritySection />
-      <HowItWorks />
-      <PricingSection />
-      <FAQSection />
-      <CTASection />
+      <main>
+        <HeroSection />
+        <TrustTicker />
+        <FeaturesSection />
+        <SecuritySection />
+        <HowItWorks />
+        <PricingSection />
+        <FAQSection />
+        <CTASection />
+      </main>
       <Footer />
     </div>
   );
