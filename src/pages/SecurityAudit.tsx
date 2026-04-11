@@ -123,7 +123,7 @@ export function SecurityAudit() {
               return (
                 <div key={item.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors shadow-sm">
                   <div className="flex items-center gap-3 min-w-[200px]">
-                    <img src={`https://www.google.com/s2/favicons?domain=${item.website || 'example.com'}&sz=32`} className="w-5 h-5" alt="favicon" />
+                    <img src={`https://www.google.com/s2/favicons?domain=${item.website || 'example.com'}&sz=32`} className="w-5 h-5" alt="favicon" loading="lazy" />
                     <p className="font-semibold text-sm text-gray-900 truncate">{item.title}</p>
                   </div>
                   <div className="flex-1 px-4 max-w-[200px]">
@@ -164,7 +164,7 @@ export function SecurityAudit() {
                 <div className="flex flex-wrap gap-2 mb-3">
                   {group.items.map(item => (
                     <Badge key={item.id} variant="gray" className="px-3 py-1">
-                      <img src={`https://www.google.com/s2/favicons?domain=${item.website || 'example.com'}&sz=16`} className="w-3 h-3 inline mr-1.5" alt="" /> 
+                      <img src={`https://www.google.com/s2/favicons?domain=${item.website || 'example.com'}&sz=16`} className="w-3 h-3 inline mr-1.5" alt="" loading="lazy" /> 
                       {item.title}
                     </Badge>
                   ))}
