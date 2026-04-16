@@ -60,9 +60,23 @@
     document.body.appendChild(promptHost);
 
     // Event handlers inside shadow
-    shadow.getElementById("mv-save").addEventListener("click", () => {
-      saveCredentials(credentials);
-      dismiss();
+    shadow.getElementById("mv-save").addEventListener("click", async () => {
+      const saveButton = shadow.getElementById("mv-save");
+      const dismissButton = shadow.getElementById("mv-dismiss");
+
+      saveButton.disabled = true;
+      dismissButton.disabled = true;
+      saveButton.textContent = "Saving...";
+
+      const saved = await saveCredentials(credentials);
+      if (saved) {
+        dismiss();
+        return;
+      }
+
+      saveButton.disabled = false;
+      dismissButton.disabled = false;
+      saveButton.textContent = "Save";
     });
 
     shadow.getElementById("mv-dismiss").addEventListener("click", () => {
@@ -78,27 +92,32 @@
    */
   function saveCredentials(credentials) {
     const payload = {
-      type: "login",
+      type: "password",
       title: window.location.hostname,
       username: credentials.username || "",
       password: credentials.password,
       url: window.location.href,
     };
 
-    chrome.runtime.sendMessage(
-      { type: "VAULT", action: "add", payload },
-      (response) => {
-        if (chrome.runtime.lastError) {
-          console.warn("[Vestiga] Failed to save credentials:", chrome.runtime.lastError.message);
-          return;
-        }
-        if (response && response.success) {
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        { type: "VAULT", action: "add", payload },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.warn("[Vestiga] Failed to save credentials:", chrome.runtime.lastError.message);
+            resolve(false);
+            return;
+          }
 
-        } else {
-          console.warn("[Vestiga] Save failed:", response?.error);
+          if (response && response.success) {
+            resolve(true);
+          } else {
+            console.warn("[Vestiga] Save failed:", response?.error);
+            resolve(false);
+          }
         }
-      }
-    );
+      );
+    });
   }
 
   /**
