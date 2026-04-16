@@ -78,7 +78,11 @@ export function computeRiskScore(
  */
 export async function runFullAudit(
  passwords: PasswordItem[],
- options: { includeAI?: boolean } = {}
+ options: {
+ includeAI?: boolean;
+ onAIError?: (error: { message: string; status?: number; code?: string }) => void;
+ onAINoTargets?: () => void;
+ } = {}
 ): Promise<AuditedItem[]> {
  // Step 1: Detect reuse locally (hash-based, never exposes passwords)
  const reuseMap = await detectReuse(passwords.map(p => p.password));
@@ -92,6 +96,10 @@ export async function runFullAudit(
  // Step 3: Get AI insights for high-risk items (if enabled)
  if (options.includeAI) {
  const highRiskItems = audited.filter(a => a.riskScore.severity === 'critical' || a.riskScore.severity === 'high');
+
+ if (highRiskItems.length === 0) {
+ options.onAINoTargets?.();
+ }
 
  await Promise.all(
  highRiskItems.slice(0, 5).map(async (auditedItem) => {
@@ -109,9 +117,18 @@ export async function runFullAudit(
  if (res.success && res.data) {
  auditedItem.aiInsight = res.data.assessment;
  auditedItem.aiSeverity = res.data.severity;
+ } else {
+ options.onAIError?.({
+ message: res.error || 'AI audit unavailable',
+ status: res.status,
+ code: (res as any).code,
+ });
  }
  } catch (error) {
  console.error('[AI Audit] Error for item:', auditedItem.item.id, error);
+ options.onAIError?.({
+ message: error instanceof Error ? error.message : 'AI audit unavailable',
+ });
  }
  })
  );

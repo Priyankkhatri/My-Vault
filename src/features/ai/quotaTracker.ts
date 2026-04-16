@@ -59,7 +59,9 @@ export function getQuotaLabel(feature: string): string {
  security_audit: 'Security Audit',
  nl_search: 'AI Search',
  password_analysis: 'Password Analysis',
+ categorization: 'Auto Categorization',
  chat: 'AI Assistant',
+ threat_detection: 'Threat Detection',
  };
  return labels[feature] || feature;
 }

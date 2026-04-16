@@ -335,8 +335,12 @@ async function memGetAuditLogs(userId: string, limit = 50) {
     .slice(0, limit);
 }
 
-export async function memGetQuotaUsage(userId: string, _feature: string) {
-  // Mock implementation for development.
-  // In production, this would query a usages table.
-  return 0;
+export async function memGetQuotaUsage(userId: string, feature: string) {
+  const since = Date.now() - 24 * 60 * 60 * 1000;
+  return store.auditLogs.filter(log => (
+    log.user_id === userId &&
+    log.event_type === 'ai_request' &&
+    log.metadata?.feature === feature &&
+    new Date(log.created_at).getTime() > since
+  )).length;
 }

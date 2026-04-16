@@ -459,8 +459,8 @@ export function Settings() {
               {[
                 { key: 'strengthAnalysis', name: 'Entropy Analysis', desc: 'AI reasoning on password patterns.', apiFeature: 'strength_analysis' },
                 { key: 'securityAudit', name: 'Deep Integrity Audit', desc: 'Global scan for related threat vectors.', apiFeature: 'security_audit' },
-                { key: 'assistantChat', name: 'Copilot Assistant', desc: 'Natural language search interface.', apiFeature: 'assistant_chat' },
-                { key: 'autoCategorization', name: 'Smart Categorize', desc: 'Auto-tagging for fast creation.', apiFeature: 'auto_categorization' }
+                { key: 'assistantChat', name: 'Copilot Assistant', desc: 'Natural language search interface.', apiFeature: 'chat' },
+                { key: 'autoCategorization', name: 'Smart Categorize', desc: 'Auto-tagging for fast creation.', apiFeature: 'categorization' }
               ].map(feat => {
                 const checked = aiToggles[feat.key as keyof typeof aiToggles];
                 const quota = quotas.find(q => q.feature === feat.apiFeature);

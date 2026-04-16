@@ -248,13 +248,14 @@ export async function getAuditLogs(userId: string, limit = 50) {
   return rows as AuditLogRow[];
 }
 
-export async function getQuotaUsage(userId: string, _feature: string) {
+export async function getQuotaUsage(userId: string, feature: string) {
   // Simple quota check using audit logs
   const query = `
     SELECT count(*) FROM audit_logs 
     WHERE user_id = $1 AND event_type = 'ai_request' 
+    AND metadata->>'feature' = $2
     AND created_at > NOW() - INTERVAL '24 hours';
   `;
-  const { rows } = await pool.query(query, [userId]);
+  const { rows } = await pool.query(query, [userId, feature]);
   return parseInt(rows[0].count, 10);
 }

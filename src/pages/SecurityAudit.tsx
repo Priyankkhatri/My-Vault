@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Shield, KeyRound, Globe, Activity, CheckCircle2, Search, Loader2, Sparkles, Check
 } from 'lucide-react';
@@ -20,11 +19,12 @@ import {
 } from '../utils/securityUtils';
 
 export function SecurityAudit() {
-  const { items } = useVault();
-  const navigate = useNavigate();
+  const { items, addToast } = useVault();
 
   const [auditedItems, setAuditedItems] = useState<AuditedItem[]>([]);
   const [isAuditing, setIsAuditing] = useState(false);
+  const [auditStatus, setAuditStatus] = useState('Local audit ready.');
+  const [auditError, setAuditError] = useState('');
   
   // State for Breach monitor
   const [isCheckingBreach, setIsCheckingBreach] = useState(false);
@@ -36,10 +36,58 @@ export function SecurityAudit() {
 
   const runAudit = async (withAI: boolean) => {
     setIsAuditing(true);
-    const passwords = items.filter(i => i.type === 'password') as PasswordItem[];
-    const results = await runFullAudit(passwords, { includeAI: withAI });
-    setAuditedItems(results);
-    setIsAuditing(false);
+    setAuditError('');
+    setAuditStatus(withAI ? 'Running local checks and AI analysis...' : 'Running local checks...');
+
+    try {
+      const passwords = items.filter(i => i.type === 'password') as PasswordItem[];
+      const seenAIErrors = new Set<string>();
+      let noAITargets = false;
+
+      const results = await runFullAudit(passwords, {
+        includeAI: withAI,
+        onAINoTargets: () => {
+          noAITargets = true;
+        },
+        onAIError: (error) => {
+          const message = error.code === 'PRO_FEATURE_REQUIRED'
+            ? 'Deep AI audit requires Pro. Local security audit still completed.'
+            : error.status === 401
+              ? 'AI audit needs a fresh login. Local security audit still completed.'
+              : error.status === 429
+                ? 'AI audit quota reached. Local security audit still completed.'
+                : error.message || 'AI audit unavailable. Local security audit still completed.';
+
+          if (!seenAIErrors.has(message)) {
+            seenAIErrors.add(message);
+            setAuditError(message);
+          }
+        },
+      });
+
+      setAuditedItems(results);
+
+      if (withAI) {
+        const aiCount = results.filter(item => item.aiInsight).length;
+        if (aiCount > 0) {
+          setAuditStatus(`Deep audit complete. ${aiCount} AI insight${aiCount === 1 ? '' : 's'} generated.`);
+          addToast('Deep audit completed', 'success');
+        } else if (noAITargets) {
+          setAuditStatus('Local audit complete. No high-risk items needed AI review.');
+        } else {
+          setAuditStatus('Local audit complete. AI insights were unavailable.');
+        }
+      } else {
+        setAuditStatus('Local audit complete.');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Security audit failed.';
+      setAuditError(message);
+      setAuditStatus('Audit could not complete.');
+      addToast(message, 'error');
+    } finally {
+      setIsAuditing(false);
+    }
   };
 
   const handleCheckBreaches = () => {
@@ -105,6 +153,8 @@ export function SecurityAudit() {
             <Button onClick={() => runAudit(true)} isLoading={isAuditing}>
               {isAuditing ? 'Analyzing...' : 'Run Deep Audit'}
             </Button>
+            <p className="text-xs text-gray-500 text-right">{auditStatus}</p>
+            {auditError && <p className="text-xs text-red-600 text-right">{auditError}</p>}
           </div>
         </Card>
 

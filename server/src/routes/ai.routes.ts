@@ -32,6 +32,8 @@ router.post('/password-analyze', aiQuotaMiddleware('password_analysis'), async (
     const { entropyScore, flags } = req.body;
     const result = await ai.analyzePasswordStrength(entropyScore, flags);
 
+    await db.createAuditLog(req.user!.userId, 'ai_request', { feature: 'password_analysis' }, req.ip || '', req.headers['user-agent'] || '');
+
     res.json({ success: true, data: { analysis: result } });
   } catch (error) {
     console.error('[AI Route] Password analysis error:', error);
@@ -46,6 +48,8 @@ router.post('/search', aiQuotaMiddleware('nl_search'), async (req: Request, res:
     const { query, itemNames } = req.body;
     const matches = await ai.semanticSearch(query, itemNames);
 
+    await db.createAuditLog(req.user!.userId, 'ai_request', { feature: 'nl_search' }, req.ip || '', req.headers['user-agent'] || '');
+
     res.json({ success: true, data: { matchedIndices: matches } });
   } catch (error) {
     console.error('[AI Route] Search error:', error);
@@ -59,6 +63,8 @@ router.post('/categorize', aiQuotaMiddleware('categorization'), async (req: Requ
   try {
     const { name, url } = req.body;
     const category = await ai.categorizeItem(name, url || '');
+
+    await db.createAuditLog(req.user!.userId, 'ai_request', { feature: 'categorization' }, req.ip || '', req.headers['user-agent'] || '');
 
     res.json({ success: true, data: { category } });
   } catch (error) {
@@ -79,6 +85,8 @@ router.post('/chat', aiQuotaMiddleware('chat'), async (req: Request, res: Respon
 
     const response = await ai.chatAssistant(messages);
 
+    await db.createAuditLog(req.user!.userId, 'ai_request', { feature: 'chat' }, req.ip || '', req.headers['user-agent'] || '');
+
     res.json({ success: true, data: { message: response } });
   } catch (error) {
     console.error('[AI Route] Chat error:', error);
@@ -93,6 +101,8 @@ router.post('/threat-analyze', aiQuotaMiddleware('threat_detection'), async (req
     const { ip, city, device, time } = req.body;
     const narrative = await ai.generateThreatNarrative({ ip, city, device, time });
 
+    await db.createAuditLog(req.user!.userId, 'ai_request', { feature: 'threat_detection' }, req.ip || '', req.headers['user-agent'] || '');
+
     res.json({ success: true, data: { analysis: narrative } });
   } catch (error) {
     console.error('[AI Route] Threat analysis error:', error);
@@ -104,8 +114,15 @@ router.post('/threat-analyze', aiQuotaMiddleware('threat_detection'), async (req
 
 router.get('/quota', async (req: Request, res: Response): Promise<void> => {
   try {
-    const features = ['security_audit', 'nl_search', 'password_analysis', 'chat'];
-    const limits: Record<string, number> = { security_audit: 20, nl_search: 50, password_analysis: 30, chat: 40 };
+    const features = ['security_audit', 'nl_search', 'password_analysis', 'categorization', 'chat', 'threat_detection'];
+    const limits: Record<string, number> = {
+      security_audit: 20,
+      nl_search: 50,
+      password_analysis: 30,
+      categorization: 100,
+      chat: 40,
+      threat_detection: 20,
+    };
 
     const quotas = await Promise.all(
       features.map(async (feature) => {
