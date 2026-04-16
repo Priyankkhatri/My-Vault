@@ -143,10 +143,6 @@ var vaultService = {
     );
 
     if (encryptedResult.error) {
-      if (!this._isMissingEncryptedSchemaError(encryptedResult.error)) {
-        throw new Error(encryptedResult.error);
-      }
-
       var legacyPayload = {
         id: itemId,
         user_id: session.user.id,
@@ -215,10 +211,6 @@ var vaultService = {
     }, session.access_token);
 
     if (encryptedResult.error) {
-      if (!this._isMissingEncryptedSchemaError(encryptedResult.error)) {
-        throw new Error(encryptedResult.error);
-      }
-
       var legacyResult = await self.supabaseRequest("PATCH", path, {
         title: data.title || "Untitled",
         username: data.username || "",

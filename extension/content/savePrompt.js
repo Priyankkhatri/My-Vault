@@ -54,6 +54,7 @@
         <button class="mv-save-btn secondary" id="mv-dismiss">Dismiss</button>
         <button class="mv-save-btn primary" id="mv-save">Save</button>
       </div>
+      <div class="mv-save-status" id="mv-status" aria-live="polite"></div>
     `;
 
     shadow.appendChild(prompt);
@@ -63,10 +64,12 @@
     shadow.getElementById("mv-save").addEventListener("click", async () => {
       const saveButton = shadow.getElementById("mv-save");
       const dismissButton = shadow.getElementById("mv-dismiss");
+      const statusEl = shadow.getElementById("mv-status");
 
       saveButton.disabled = true;
       dismissButton.disabled = true;
       saveButton.textContent = "Saving...";
+      statusEl.textContent = "Saving...";
 
       const saved = await saveCredentials(credentials);
       if (saved) {
@@ -77,6 +80,7 @@
       saveButton.disabled = false;
       dismissButton.disabled = false;
       saveButton.textContent = "Save";
+      statusEl.textContent = "Save failed. Please try again.";
     });
 
     shadow.getElementById("mv-dismiss").addEventListener("click", () => {

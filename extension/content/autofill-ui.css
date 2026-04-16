@@ -180,6 +180,14 @@
   padding: 0 16px 14px;
 }
 
+.mv-save-status {
+  padding: 0 16px 14px;
+  min-height: 16px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #0f766e;
+}
+
 .mv-save-btn {
   flex: 1;
   padding: 8px 0;

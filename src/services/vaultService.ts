@@ -159,31 +159,27 @@ export async function saveVaultItem(
 
     if (error) {
       console.error('[Vault] Insert error detail:', error);
-      if (isMissingSupabaseSchemaError(error)) {
-        // Fallback for the legacy plaintext schema used by the current Supabase database.
-        const fallback = await supabase
-          .from('vault_items')
-          .insert({
-            id: itemId,
-            user_id: session.user.id,
-            title: item.title,
-            username: (item as any).username || null,
-            password: (item as any).password || null,
-            type: item.type,
-            favorite: item.favorite ?? false,
-            tags: item.tags ?? [],
-            notes: item.notes ?? null,
-          })
-          .select('id, created_at, updated_at')
-          .single();
+      const fallback = await supabase
+        .from('vault_items')
+        .insert({
+          id: itemId,
+          user_id: session.user.id,
+          title: item.title,
+          username: (item as any).username || null,
+          password: (item as any).password || null,
+          type: item.type,
+          favorite: item.favorite ?? false,
+          tags: item.tags ?? [],
+          notes: item.notes ?? null,
+        })
+        .select('id, created_at, updated_at')
+        .single();
 
-        if (fallback.error) {
-          return { success: false, error: fallback.error.message || 'Failed to save item' };
-        }
-
-        return { success: true, id: fallback.data?.id || itemId };
+      if (fallback.error) {
+        return { success: false, error: fallback.error.message || error.message || 'Failed to save item' };
       }
-      return { success: false, error: error.message || 'Failed to save item' };
+
+      return { success: true, id: fallback.data?.id || itemId };
     }
 
     // Return the item UUID that was persisted
@@ -224,29 +220,26 @@ export async function updateVaultItem(
       .eq('user_id', session.user.id);
 
     if (error) {
-      if (isMissingSupabaseSchemaError(error)) {
-        const { error: fallbackError } = await supabase
-          .from('vault_items')
-          .update({
-            title: item.title,
-            username: (item as any).username || null,
-            password: (item as any).password || null,
-            type: item.type,
-            favorite: item.favorite ?? false,
-            tags: item.tags ?? [],
-            notes: item.notes ?? null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', item.id)
-          .eq('user_id', session.user.id);
+      const { error: fallbackError } = await supabase
+        .from('vault_items')
+        .update({
+          title: item.title,
+          username: (item as any).username || null,
+          password: (item as any).password || null,
+          type: item.type,
+          favorite: item.favorite ?? false,
+          tags: item.tags ?? [],
+          notes: item.notes ?? null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', item.id)
+        .eq('user_id', session.user.id);
 
-        if (fallbackError) {
-          return { success: false, error: fallbackError.message || 'Failed to update item' };
-        }
-
-        return { success: true };
+      if (fallbackError) {
+        return { success: false, error: fallbackError.message || error.message || 'Failed to update item' };
       }
-      return { success: false, error: error.message || 'Failed to update item' };
+
+      return { success: true };
     }
 
     return { success: true };
